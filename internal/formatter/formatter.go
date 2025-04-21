@@ -2,6 +2,7 @@ package formatter
 
 import (
 	"fmt"
+	"gofileyourself/internal/theme"
 	"io"
 
 	"github.com/alecthomas/chroma"
@@ -40,29 +41,5 @@ func chromaColorToTcell(c chroma.Colour) tcell.Color {
 // Register the formatter
 func RegisterCustomFormatter() {
 	formatters.Register("tview", &TviewFormatter{})
-	styles.Register(chroma.MustNewStyle("gruvbox", chroma.StyleEntries{
-		chroma.Text:               "#ebdbb2",
-		chroma.Error:              "#fb4934",
-		chroma.Comment:            "#928374",
-		chroma.Keyword:            "#fb4934",
-		chroma.KeywordConstant:    "#d3869b",
-		chroma.KeywordDeclaration: "#fb4934",
-		chroma.KeywordNamespace:   "#fb4934",
-		chroma.KeywordType:        "#fabd2f",
-		chroma.Operator:           "#ebdbb2",
-		chroma.Punctuation:        "#ebdbb2",
-		chroma.Name:               "#ebdbb2",
-		chroma.NameAttribute:      "#b8bb26",
-		chroma.NameBuiltin:        "#fabd2f",
-		chroma.NameClass:          "#8ec07c",
-		chroma.NameConstant:       "#d3869b",
-		chroma.NameDecorator:      "#d3869b",
-		chroma.NameFunction:       "#b8bb26",
-		chroma.NameTag:            "#fb4934",
-		chroma.NameVariable:       "#ebdbb2",
-		chroma.Literal:            "#d3869b",
-		chroma.LiteralNumber:      "#d3869b",
-		chroma.LiteralString:      "#b8bb26",
-		chroma.Background:         "#282828",
-	}))
+	styles.Register(theme.GetFormatterStyle())
 }

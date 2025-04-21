@@ -1,117 +1,17 @@
 package explorer
 
 import (
-	"bytes"
 	"gofileyourself/internal/formatter"
+	"gofileyourself/internal/theme"
 	"os"
-	"os/exec"
 	"path/filepath"
 
-	"github.com/alecthomas/chroma/formatters"
-	"github.com/alecthomas/chroma/lexers"
-	"github.com/alecthomas/chroma/styles"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
 func init() {
 	formatter.RegisterCustomFormatter()
-}
-
-// findExactItem is a helper function that searches for an item in a list
-func findExactItem(list *tview.List, searchTerm string) int {
-	matchingIndeces := list.FindItems(searchTerm, "", false, true)
-	if len(matchingIndeces) == 1 {
-		return matchingIndeces[0]
-	}
-	for _, index := range matchingIndeces {
-		if text, _ := list.GetItemText(index); text == searchTerm {
-			return index
-		}
-	}
-	return 0
-}
-
-// loadDirectory is a helper function that loads directory contents into a list
-func loadDirectory(path string, showHiddenFiles bool) (*tview.List, error) {
-	fileInfo, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-	if fileInfo.IsDir() {
-		files, err := os.ReadDir(path)
-		if err != nil {
-			return nil, err
-		}
-		list := tview.NewList().ShowSecondaryText(false)
-		for _, file := range files {
-			fileName := file.Name()
-			if !showHiddenFiles && len(fileName) > 0 && fileName[0] == '.' {
-				continue
-			}
-			list.AddItem(file.Name(), "", 0, nil)
-		}
-		return list, nil
-	}
-	return nil, nil
-}
-
-// loadFilePreview is a helper function that creates a text view for file contents
-func loadFilePreview(path string) (*tview.TextView, error) {
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create text view
-	textView := tview.NewTextView().
-		SetDynamicColors(true).
-		SetRegions(true).
-		SetWordWrap(true)
-
-	// Detect language based on file extension
-	lexer := lexers.Match(path)
-	if lexer == nil {
-		lexer = lexers.Fallback
-	}
-
-	// Use gruvbox style
-	style := styles.Get("gruvbox")
-	if style == nil {
-		style = styles.Fallback
-	}
-
-	formatter := formatters.Get("tview")
-	if formatter == nil {
-		formatter = formatters.Fallback
-	}
-
-	iterator, err := lexer.Tokenise(nil, string(content))
-	if err != nil {
-		return nil, err
-	}
-
-	// Create buffer to store formatted output
-	var buf bytes.Buffer
-	err = formatter.Format(&buf, style, iterator)
-	if err != nil {
-		return nil, err
-	}
-
-	textView.SetText(buf.String())
-	return textView, nil
-}
-
-// openInNvim is a helper function that opens a file in neovim
-func openInNvim(path string, app *tview.Application) error {
-	app.Suspend(func() {
-		cmd := exec.Command("nvim", path)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Run()
-	})
-	return nil
 }
 
 // FileExplorer represents the state and behavior of the file explorer
@@ -129,56 +29,56 @@ type FileExplorer struct {
 	showHiddenFiles     bool
 }
 
-func (fe *FileExplorer) applyGruvboxTheme() {
-	theme := newGruvboxTheme()
+func (fe *FileExplorer) applyTheme() {
+	explorerTheme := theme.GetExplorerTheme()
 
 	// Set global background through root flex
-	fe.rootFlex.SetBackgroundColor(theme.bg0)
-	fe.listFlex.SetBackgroundColor(theme.bg0)
+	fe.rootFlex.SetBackgroundColor(explorerTheme.Bg0)
+	fe.listFlex.SetBackgroundColor(explorerTheme.Bg0)
 
 	// Style the lists
 	fe.currentList.
-		SetMainTextColor(theme.fg1).
-		SetSelectedTextColor(theme.bg0).
-		SetSelectedBackgroundColor(theme.aqua).
-		SetBackgroundColor(theme.bg0)
+		SetMainTextColor(explorerTheme.Fg1).
+		SetSelectedTextColor(explorerTheme.Bg0).
+		SetSelectedBackgroundColor(explorerTheme.Aqua).
+		SetBackgroundColor(explorerTheme.Bg0)
 
 	if fe.parentList != nil {
 		if list, ok := fe.parentList.(*tview.List); ok {
 			list.
-				SetMainTextColor(theme.fg1).
-				SetSelectedTextColor(theme.bg0).
-				SetSelectedBackgroundColor(theme.blue).
-				SetBackgroundColor(theme.bg0)
+				SetMainTextColor(explorerTheme.Fg1).
+				SetSelectedTextColor(explorerTheme.Bg0).
+				SetSelectedBackgroundColor(explorerTheme.Blue).
+				SetBackgroundColor(explorerTheme.Bg0)
 		}
 	}
 
 	// Style the selected list/preview
 	if list, ok := fe.selectedList.(*tview.List); ok {
 		list.
-			SetMainTextColor(theme.fg1).
-			SetSelectedTextColor(theme.bg0).
-			SetSelectedBackgroundColor(theme.green).
-			SetBackgroundColor(theme.bg0)
+			SetMainTextColor(explorerTheme.Fg1).
+			SetSelectedTextColor(explorerTheme.Bg0).
+			SetSelectedBackgroundColor(explorerTheme.Green).
+			SetBackgroundColor(explorerTheme.Bg0)
 	} else if textView, ok := fe.selectedList.(*tview.TextView); ok {
 		textView.
-			SetTextColor(theme.fg0).
-			SetBackgroundColor(theme.bg0)
+			SetTextColor(explorerTheme.Fg0).
+			SetBackgroundColor(explorerTheme.Bg0)
 	}
 
 	// Style the footer
 	if fe.footer != nil {
 		fe.footer.
-			SetFieldBackgroundColor(theme.bg1).
-			SetFieldTextColor(theme.fg0).
-			SetBackgroundColor(theme.bg0)
+			SetFieldBackgroundColor(explorerTheme.Bg1).
+			SetFieldTextColor(explorerTheme.Fg0).
+			SetBackgroundColor(explorerTheme.Bg0)
 	}
 
 	// Style the header
 	if fe.header != nil {
 		fe.header.
-			SetBackgroundColor(theme.blue)
-		fe.header.SetTextColor(theme.bg0)
+			SetBackgroundColor(explorerTheme.Blue)
+		fe.header.SetTextColor(explorerTheme.Bg0)
 	}
 }
 
@@ -192,9 +92,14 @@ func NewFileExplorer() (*FileExplorer, error) {
 	fe := &FileExplorer{
 		app:                 tview.NewApplication(),
 		currentPath:         currentPath,
+		currentList:         tview.NewList(),
+		parentList:          tview.NewList(),
+		selectedList:        tview.NewList(),
 		directoryToIndexMap: make(map[string]int),
 		listFlex:            tview.NewFlex(),
 		rootFlex:            tview.NewFlex(),
+		footer:              tview.NewInputField(),
+		header:              tview.NewTextView(),
 		showHiddenFiles:     false,
 	}
 
@@ -207,49 +112,8 @@ func NewFileExplorer() (*FileExplorer, error) {
 
 // initialize sets up the initial state of the FileExplorer
 func (fe *FileExplorer) initialize() error {
-	var err error
-	fe.currentList, err = loadDirectory(fe.currentPath, fe.showHiddenFiles)
-	if err != nil {
-		return err
-	}
-
-	parentPath := filepath.Join(fe.currentPath, "..")
-	newParentList, err := loadDirectory(parentPath, fe.showHiddenFiles)
-	if err != nil {
-		return err
-	}
-	parentDirectoryIndex := findExactItem(newParentList, filepath.Base(fe.currentPath))
-	newParentList.SetCurrentItem(parentDirectoryIndex)
-	fe.parentList = newParentList
-	parentAbsolutePath, _ := filepath.Abs(parentPath)
-	fe.directoryToIndexMap[parentAbsolutePath] = parentDirectoryIndex
-
-	selectedName, _ := fe.currentList.GetItemText(0)
-	selectedPath := filepath.Join(fe.currentPath, selectedName)
-	fileInfo, err := os.Stat(selectedPath)
-	if err != nil {
-		return err
-	}
-	if fileInfo.IsDir() {
-		fe.selectedList, err = loadDirectory(selectedPath, fe.showHiddenFiles)
-		if err != nil {
-			return err
-		}
-	} else {
-		fe.selectedList, err = loadFilePreview(selectedPath)
-		if err != nil {
-			return err
-		}
-	}
-
-	currentAbsolutePath, _ := filepath.Abs(fe.currentPath)
-	fe.header = tview.NewTextView().
-		SetDynamicColors(true).
-		SetRegions(true).
-		SetWordWrap(true).
-		SetText(currentAbsolutePath)
-
 	fe.setupKeyBindings()
+	fe.setCurrentDirectory(".")
 	fe.draw()
 	return nil
 }
@@ -276,11 +140,11 @@ func (fe *FileExplorer) draw() {
 		fe.rootFlex.AddItem(fe.footer, 1, 0, false)
 	}
 	fe.app.SetRoot(fe.rootFlex, true)
-	fe.applyGruvboxTheme()
+	fe.applyTheme()
 }
 
-// updateSelectedDirectory updates the selected directory/file preview
-func (fe *FileExplorer) updateSelectedDirectory(selectedPath string) error {
+// setSelectedDirectory updates the selected directory/file preview
+func (fe *FileExplorer) setSelectedDirectory(selectedPath string) error {
 	selectedAbsolutePath, _ := filepath.Abs(selectedPath)
 	selectedDirectoryIndex := fe.directoryToIndexMap[selectedAbsolutePath]
 
@@ -298,17 +162,37 @@ func (fe *FileExplorer) updateSelectedDirectory(selectedPath string) error {
 		newSelectedList.SetCurrentItem(selectedDirectoryIndex)
 		fe.selectedList = newSelectedList
 	}
-
-	fe.draw()
 	return nil
 }
 
-// changeCurrentDirectory changes the current directory and updates related views
-func (fe *FileExplorer) changeCurrentDirectory(path string) error {
+func (fe *FileExplorer) setParentDirectory(path string) error {
+	currentAbsolutePath, _ := filepath.Abs(path)
+	if currentAbsolutePath == "/" {
+		emptyList := tview.NewList().ShowSecondaryText(false)
+		fe.parentList = emptyList
+	} else {
+		parentPath := filepath.Join(currentAbsolutePath, "..")
+		newParentList, err := loadDirectory(parentPath, fe.showHiddenFiles)
+		if err != nil {
+			return err
+		}
+
+		parentDirectoryIndex := findExactItem(newParentList, filepath.Base(currentAbsolutePath))
+
+		parentAbsolutePath, _ := filepath.Abs(parentPath)
+		fe.directoryToIndexMap[parentAbsolutePath] = parentDirectoryIndex
+		newParentList.SetCurrentItem(parentDirectoryIndex)
+		fe.parentList = newParentList
+	}
+	return nil
+}
+
+// setCurrentDirectory changes the current directory and updates related views
+func (fe *FileExplorer) setCurrentDirectory(path string) error {
 	// Update current directory
 	currentAbsolutePath, _ := filepath.Abs(path)
 	currentDirectoryIndex := fe.directoryToIndexMap[currentAbsolutePath]
-	newCurrentList, err := loadDirectory(path, fe.showHiddenFiles)
+	newCurrentList, err := loadDirectory(currentAbsolutePath, fe.showHiddenFiles)
 	if err != nil {
 		return err
 	}
@@ -318,45 +202,28 @@ func (fe *FileExplorer) changeCurrentDirectory(path string) error {
 	fe.currentList = newCurrentList
 
 	// Update parent directory
-	if currentAbsolutePath == "/" {
-		emptyList := tview.NewList().ShowSecondaryText(false)
-		fe.parentList = emptyList
-	} else {
-		parentPath := filepath.Join(path, "..")
-		newParentList, err := loadDirectory(parentPath, fe.showHiddenFiles)
-		if err != nil {
-			return err
-		}
-
-		parentDirectoryIndex := findExactItem(newParentList, filepath.Base(path))
-
-		parentAbsolutePath, _ := filepath.Abs(parentPath)
-		fe.directoryToIndexMap[parentAbsolutePath] = parentDirectoryIndex
-		newParentList.SetCurrentItem(parentDirectoryIndex)
-		fe.parentList = newParentList
-	}
+	fe.setParentDirectory(currentAbsolutePath)
 
 	// Update selected directory
 	selectedName, _ := fe.currentList.GetItemText(currentDirectoryIndex)
-	selectedPath := filepath.Join(path, selectedName)
-	if err := fe.updateSelectedDirectory(selectedPath); err != nil {
+	selectedPath := filepath.Join(currentAbsolutePath, selectedName)
+	if err := fe.setSelectedDirectory(selectedPath); err != nil {
 		return err
 	}
 
 	// Update header
-	fe.updateHeader(currentAbsolutePath)
+	fe.setHeader(currentAbsolutePath)
 
-	fe.currentPath = path
+	fe.currentPath = currentAbsolutePath
 	return nil
 }
 
-func (fe *FileExplorer) updateHeader(text string) {
+func (fe *FileExplorer) setHeader(text string) {
 	fe.header.SetText(text)
-	fe.draw()
 }
 
-// updateCurrentLine updates the current line selection
-func (fe *FileExplorer) updateCurrentLine(lineIndex int) error {
+// setCurrentLine updates the current line selection
+func (fe *FileExplorer) setCurrentLine(lineIndex int) error {
 	if lineIndex < 0 || lineIndex >= fe.currentList.GetItemCount() {
 		return nil
 	}
@@ -365,7 +232,7 @@ func (fe *FileExplorer) updateCurrentLine(lineIndex int) error {
 	fe.directoryToIndexMap[currentAbsolutePath] = lineIndex
 
 	selectedName, _ := fe.currentList.GetItemText(lineIndex)
-	return fe.updateSelectedDirectory(filepath.Join(fe.currentPath, selectedName))
+	return fe.setSelectedDirectory(filepath.Join(fe.currentPath, selectedName))
 }
 
 func (fe *FileExplorer) runFooterCommand(inputText string) {
@@ -374,7 +241,7 @@ func (fe *FileExplorer) runFooterCommand(inputText string) {
 		searchTerm := inputText[1:]
 		matchingIndeces := fe.currentList.FindItems(searchTerm, "", false, true)
 		if len(matchingIndeces) > 0 {
-			fe.updateCurrentLine(matchingIndeces[0])
+			fe.setCurrentLine(matchingIndeces[0])
 		}
 	case ':':
 		command := inputText[1:]
@@ -405,12 +272,13 @@ func (fe *FileExplorer) handleFooterInput(prompt string) {
 // setupKeyBindings configures keyboard input handling
 func (fe *FileExplorer) setupKeyBindings() {
 	fe.currentList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		defer fe.draw()
 		switch event.Rune() {
 		case 'j': // scroll down
-			fe.updateCurrentLine(fe.currentList.GetCurrentItem() + 1)
+			fe.setCurrentLine(fe.currentList.GetCurrentItem() + 1)
 			return nil
 		case 'k': // scroll up
-			fe.updateCurrentLine(fe.currentList.GetCurrentItem() - 1)
+			fe.setCurrentLine(fe.currentList.GetCurrentItem() - 1)
 			return nil
 		case 'q': // quit
 			fe.app.Stop()
@@ -424,7 +292,7 @@ func (fe *FileExplorer) setupKeyBindings() {
 				return event
 			}
 			if fileInfo.IsDir() {
-				if err := fe.changeCurrentDirectory(filePath); err != nil {
+				if err := fe.setCurrentDirectory(filePath); err != nil {
 					return event
 				}
 			} else {
@@ -434,7 +302,7 @@ func (fe *FileExplorer) setupKeyBindings() {
 			return nil
 		case 'h': // go up directory
 			dirPath := filepath.Join(fe.currentPath, "..")
-			if err := fe.changeCurrentDirectory(dirPath); err != nil {
+			if err := fe.setCurrentDirectory(dirPath); err != nil {
 				return event
 			}
 			return nil
