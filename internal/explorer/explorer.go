@@ -205,6 +205,8 @@ func (fe *FileExplorer) setCurrentDirectory(path string) error {
 
 	newCurrentList.SetInputCapture(fe.currentList.GetInputCapture())
 	newCurrentList.SetCurrentItem(currentDirectoryIndex)
+	currentDirectoryIndex = newCurrentList.GetCurrentItem()
+	// update index in case it was clipped
 	fe.currentList = newCurrentList
 
 	// Update parent directory
@@ -291,8 +293,33 @@ func (fe *FileExplorer) setupKeyBindings() {
 		switch event.Key() {
 		case tcell.KeyCtrlH:
 			fe.showHiddenFiles = !fe.showHiddenFiles
+
+			// Remember current selection before refresh
+			currentName, _ := fe.currentList.GetItemText(fe.currentList.GetCurrentItem())
+
+			// Remember selected directory name if we're showing a directory
+			var selectedName string
+			if list, ok := fe.selectedList.(*tview.List); ok {
+				selectedName, _ = list.GetItemText(list.GetCurrentItem())
+			}
+
+			// Refresh the view
 			if err := fe.setCurrentDirectory(fe.currentPath); err != nil {
 				return event
+			}
+
+			// Restore current selection
+			if idx := findExactItem(fe.currentList, currentName); idx >= 0 {
+				fe.setCurrentLine(idx)
+			}
+
+			// Restore selected directory selection if applicable
+			if list, ok := fe.selectedList.(*tview.List); ok {
+				if idx := findExactItem(list, selectedName); idx >= 0 {
+					list.SetCurrentItem(idx)
+					absoluteSelectedPath, _ := filepath.Abs(filepath.Join(fe.currentPath, currentName))
+					fe.directoryToIndexMap[absoluteSelectedPath] = idx
+				}
 			}
 			return nil
 		}
