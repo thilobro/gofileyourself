@@ -16,17 +16,20 @@ func init() {
 
 // FileExplorer represents the state and behavior of the file explorer
 type FileExplorer struct {
-	app                 *tview.Application
-	currentPath         string
-	currentList         *tview.List
-	parentList          tview.Primitive
-	selectedList        tview.Primitive
-	rootFlex            *tview.Flex
-	listFlex            *tview.Flex
-	directoryToIndexMap map[string]int
-	footer              *tview.InputField
-	header              *tview.TextView
-	showHiddenFiles     bool
+	app                  *tview.Application
+	currentPath          string
+	currentList          *tview.List
+	parentList           tview.Primitive
+	selectedList         tview.Primitive
+	rootFlex             *tview.Flex
+	listFlex             *tview.Flex
+	directoryToIndexMap  map[string]int
+	footer               *tview.InputField
+	header               *tview.TextView
+	showHiddenFiles      bool
+	currentSearchTerm    string
+	currentSearchIndeces []int
+	currentFocusedWidget tview.Primitive
 }
 
 func (fe *FileExplorer) applyTheme() {
@@ -101,6 +104,7 @@ func NewFileExplorer() (*FileExplorer, error) {
 		footer:              tview.NewInputField(),
 		header:              tview.NewTextView(),
 		showHiddenFiles:     false,
+		currentSearchTerm:   "",
 	}
 
 	if err := fe.initialize(); err != nil {
@@ -114,6 +118,7 @@ func NewFileExplorer() (*FileExplorer, error) {
 func (fe *FileExplorer) initialize() error {
 	fe.setupKeyBindings()
 	fe.setCurrentDirectory(".")
+	fe.currentFocusedWidget = fe.currentList
 	fe.draw()
 	return nil
 }
@@ -140,6 +145,7 @@ func (fe *FileExplorer) draw() {
 		fe.rootFlex.AddItem(fe.footer, 1, 0, false)
 	}
 	fe.app.SetRoot(fe.rootFlex, true)
+	fe.app.SetFocus(fe.currentFocusedWidget)
 	fe.applyTheme()
 }
 
@@ -214,7 +220,9 @@ func (fe *FileExplorer) setCurrentDirectory(path string) error {
 	// Update header
 	fe.setHeader(currentAbsolutePath)
 
+	fe.searchInCurrentDirectory()
 	fe.currentPath = currentAbsolutePath
+	fe.currentFocusedWidget = fe.currentList
 	return nil
 }
 
@@ -235,13 +243,20 @@ func (fe *FileExplorer) setCurrentLine(lineIndex int) error {
 	return fe.setSelectedDirectory(filepath.Join(fe.currentPath, selectedName))
 }
 
+func (fe *FileExplorer) searchInCurrentDirectory() {
+	if fe.currentSearchTerm == "" {
+		return
+	}
+	fe.currentSearchIndeces = fe.currentList.FindItems(fe.currentSearchTerm, "", false, true)
+}
+
 func (fe *FileExplorer) runFooterCommand(inputText string) {
 	switch inputText[0] {
 	case '/':
-		searchTerm := inputText[1:]
-		matchingIndeces := fe.currentList.FindItems(searchTerm, "", false, true)
-		if len(matchingIndeces) > 0 {
-			fe.setCurrentLine(matchingIndeces[0])
+		fe.currentSearchTerm = inputText[1:]
+		fe.searchInCurrentDirectory()
+		if len(fe.currentSearchIndeces) > 0 {
+			fe.setCurrentLine(fe.currentSearchIndeces[0])
 		}
 	case ':':
 		command := inputText[1:]
@@ -250,7 +265,7 @@ func (fe *FileExplorer) runFooterCommand(inputText string) {
 			fe.app.Stop()
 		}
 	}
-	fe.app.SetFocus(fe.currentList)
+	fe.currentFocusedWidget = fe.currentList
 }
 
 func (fe *FileExplorer) handleFooterInput(prompt string) {
@@ -260,19 +275,27 @@ func (fe *FileExplorer) handleFooterInput(prompt string) {
 			if key == tcell.KeyEnter {
 				inputText := fe.footer.GetText()
 				fe.runFooterCommand(inputText)
-				fe.app.SetFocus(fe.currentList)
+				fe.currentFocusedWidget = fe.currentList
 			}
 			fe.draw()
 		},
 	)
+	fe.currentFocusedWidget = fe.footer
 	fe.draw()
-	fe.app.SetFocus(fe.footer)
 }
 
 // setupKeyBindings configures keyboard input handling
 func (fe *FileExplorer) setupKeyBindings() {
 	fe.currentList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		defer fe.draw()
+		switch event.Key() {
+		case tcell.KeyCtrlH:
+			fe.showHiddenFiles = !fe.showHiddenFiles
+			if err := fe.setCurrentDirectory(fe.currentPath); err != nil {
+				return event
+			}
+			return nil
+		}
 		switch event.Rune() {
 		case 'j': // scroll down
 			fe.setCurrentLine(fe.currentList.GetCurrentItem() + 1)
@@ -311,6 +334,31 @@ func (fe *FileExplorer) setupKeyBindings() {
 			return nil
 		case ':': // command
 			fe.handleFooterInput(":")
+			return nil
+		case 'n': // cycle search
+			if len(fe.currentSearchIndeces) > 0 {
+				currentIndex := fe.currentList.GetCurrentItem()
+				for _, index := range fe.currentSearchIndeces {
+					if index > currentIndex {
+						fe.setCurrentLine(index)
+						return nil
+					}
+				}
+				fe.setCurrentLine(fe.currentSearchIndeces[0])
+			}
+		case 'N': // cycle search backwards
+			if len(fe.currentSearchIndeces) > 0 {
+				currentIndex := fe.currentList.GetCurrentItem()
+				for i := len(fe.currentSearchIndeces) - 1; i >= 0; i-- {
+					if fe.currentSearchIndeces[i] < currentIndex {
+						fe.setCurrentLine(fe.currentSearchIndeces[i])
+						return nil
+					}
+				}
+				// If no smaller index found, wrap around to the last item
+				fe.setCurrentLine(fe.currentSearchIndeces[len(fe.currentSearchIndeces)-1])
+			}
+
 			return nil
 		}
 		return event
