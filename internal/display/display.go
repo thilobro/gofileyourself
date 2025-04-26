@@ -60,6 +60,7 @@ func (display *Display) setActiveWidgetBasedOnMode(mode Mode) {
 		panic(err)
 	}
 	display.activeWidget = widget
+	display.context.App.SetRoot(display.activeWidget.Root(), true)
 }
 
 func NewDisplay(factories map[Mode]widget.Factory) (*Display, error) {
