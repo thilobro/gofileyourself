@@ -2,11 +2,21 @@ package finder
 
 import (
 	"gofileyourself/internal/helper"
+	"gofileyourself/internal/theme"
 	"gofileyourself/internal/widget"
+	"sort"
 	"strings"
 
+	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/rivo/tview"
 )
+
+type rankedItem struct {
+	index       int
+	rank        int
+	displayText string
+	text        string
+}
 
 type Finder struct {
 	context              *widget.Context
@@ -39,8 +49,9 @@ func (finder *Finder) handleFooterInput() {
 	finder.footer = tview.NewInputField().SetText("/")
 	finder.footer.SetChangedFunc(
 		func(text string) {
-			text = strings.TrimPrefix(text, "/")
-			finder.fuzzySearch(text)
+			currentInput := strings.TrimPrefix(text, "/")
+			finder.resetFileList()
+			finder.fuzzySearch(currentInput)
 			finder.Draw()
 		},
 	)
@@ -49,21 +60,48 @@ func (finder *Finder) handleFooterInput() {
 }
 
 func (finder *Finder) fuzzySearch(text string) {
+	items := make([]rankedItem, finder.fileList.GetItemCount())
+
+	// Collect all items with their ranks
 	for i := 0; i < finder.fileList.GetItemCount(); i++ {
-		_, itemName := finder.fileList.GetItemText(i)
-		if itemName == text {
-			finder.fileList.SetCurrentItem(i)
+		itemDisplayName, itemName := finder.fileList.GetItemText(i)
+		rank := fuzzy.RankMatch(text, itemName)
+		items[i] = rankedItem{
+			index:       i,
+			rank:        rank,
+			text:        itemName,
+			displayText: itemDisplayName,
 		}
 	}
+
+	// Sort items by rank (higher rank = better match)
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].rank > items[j].rank
+	})
+
+	// Clear and rebuild the list in sorted order
+	finder.fileList.Clear()
+	for _, item := range items {
+		if item.rank > -1 { // Only show matching items
+			finder.fileList.AddItem(item.displayText, item.text, 0, nil)
+		}
+	}
+
 	finder.Draw()
 }
 
-func (finder *Finder) searchInDirectory(path string) error {
-	fileList, err := helper.LoadDirectory(path, finder.showHiddenFiles, true)
+func (finder *Finder) resetFileList() error {
+	finder.fileList.Clear()
+	fileList, err := helper.LoadDirectory(finder.context.CurrentPath, finder.showHiddenFiles, true)
 	if err != nil {
 		return err
 	}
 	finder.fileList = fileList
+	return nil
+}
+
+func (finder *Finder) searchInDirectory(path string) error {
+	finder.resetFileList()
 	finder.Draw()
 	finder.handleFooterInput()
 	return nil
@@ -81,6 +119,7 @@ func (finder *Finder) Draw() {
 		finder.rootFlex.AddItem(finder.footer, 1, 0, false)
 	}
 	finder.context.App.SetFocus(finder.currentFocusedWidget)
+	finder.applyTheme()
 }
 
 func (finder *Finder) Run() error {
@@ -88,4 +127,26 @@ func (finder *Finder) Run() error {
 }
 
 func (finder *Finder) SetupKeyBindings() {
+}
+
+func (finder *Finder) applyTheme() {
+	explorerTheme := theme.GetExplorerTheme()
+
+	// Set global background through root flex
+	finder.rootFlex.SetBackgroundColor(explorerTheme.Bg0)
+
+	// Style the lists
+	finder.fileList.
+		SetMainTextColor(explorerTheme.Fg1).
+		SetSelectedTextColor(explorerTheme.Black).
+		SetSelectedBackgroundColor(explorerTheme.Aqua).
+		SetBackgroundColor(explorerTheme.Bg0)
+
+	// Style the footer
+	if finder.footer != nil {
+		finder.footer.
+			SetFieldBackgroundColor(explorerTheme.Bg1).
+			SetFieldTextColor(explorerTheme.Fg0).
+			SetBackgroundColor(explorerTheme.Bg0)
+	}
 }
