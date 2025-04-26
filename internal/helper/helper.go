@@ -1,9 +1,11 @@
-package explorer
+package helper
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 
 	"github.com/alecthomas/chroma/formatters"
@@ -12,8 +14,8 @@ import (
 	"github.com/rivo/tview"
 )
 
-// findExactItem is a helper function that searches for an item in a list
-func findExactItem(list *tview.List, searchTerm string) int {
+// FindExactItem is a helper function that searches for an item in a list
+func FindExactItem(list *tview.List, searchTerm string) int {
 	matchingIndeces := list.FindItems(searchTerm, "", false, true)
 	if len(matchingIndeces) == 1 {
 		return matchingIndeces[0]
@@ -26,19 +28,29 @@ func findExactItem(list *tview.List, searchTerm string) int {
 	return 0
 }
 
-// loadDirectory is a helper function that loads directory contents into a list
-func loadDirectory(path string, showHiddenFiles bool) (*tview.List, error) {
+// LoadDirectory is a helper function that loads directory contents into a list
+func LoadDirectory(path string, showHiddenFiles bool, recursive bool) (*tview.List, error) {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
-	if fileInfo.IsDir() {
-		files, err := os.ReadDir(path)
+
+	if !fileInfo.IsDir() {
+		return nil, nil
+	}
+
+	list := tview.NewList().ShowSecondaryText(false)
+
+	var processDir func(dirPath string) error
+	processDir = func(dirPath string) error {
+		files, err := os.ReadDir(dirPath)
 		if err != nil {
-			return nil, err
+			return err
+		}
+		if len(files) == 0 {
+			return nil
 		}
 
-		// Convert to slice for sorting
 		fileSlice := make([]os.DirEntry, 0)
 		for _, file := range files {
 			fileName := file.Name()
@@ -52,38 +64,53 @@ func loadDirectory(path string, showHiddenFiles bool) (*tview.List, error) {
 		sort.Slice(fileSlice, func(i, j int) bool {
 			iIsDir := fileSlice[i].IsDir()
 			jIsDir := fileSlice[j].IsDir()
-			// If both are directories or both are files, sort by name
 			if iIsDir == jIsDir {
 				return fileSlice[i].Name() < fileSlice[j].Name()
 			}
-			// If i is a directory and j isn't, i should come first
 			return iIsDir
 		})
 
-		list := tview.NewList().ShowSecondaryText(false)
 		for _, file := range fileSlice {
 			info, err := file.Info()
 			if err != nil {
 				continue
 			}
 
-			fileName := file.Name()
-			displayName := fileName
-			if file.IsDir() {
-				displayName = fileName + "/"
-			} else if info.Mode()&0111 != 0 {
-				displayName = fileName + "*"
+			// Get relative path from the root directory
+			relPath, err := filepath.Rel(path, filepath.Join(dirPath, file.Name()))
+			if err != nil {
+				continue
 			}
 
-			list.AddItem(displayName, fileName, 0, nil)
+			displayName := relPath
+			if file.IsDir() {
+				displayName += "/"
+				if recursive {
+					// Recursively process subdirectories
+					err := processDir(filepath.Join(dirPath, file.Name()))
+					if err != nil {
+						return err
+					}
+				}
+			} else if info.Mode()&0111 != 0 {
+				displayName += "*"
+			}
+
+			list.AddItem(displayName, relPath, 0, nil)
 		}
-		return list, nil
+		return nil
 	}
-	return nil, nil
+
+	err = processDir(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return list, nil
 }
 
-// loadFilePreview is a helper function that creates a text view for file contents
-func loadFilePreview(path string) (*tview.TextView, error) {
+// LoadFilePreview is a helper function that creates a text view for file contents
+func LoadFilePreview(path string) (*tview.TextView, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -128,8 +155,8 @@ func loadFilePreview(path string) (*tview.TextView, error) {
 	return textView, nil
 }
 
-// openInNvim is a helper function that opens a file in neovim
-func openInNvim(path string, app *tview.Application) error {
+// OpenInNvim is a helper function that opens a file in neovim
+func OpenInNvim(path string, app *tview.Application) error {
 	app.Suspend(func() {
 		cmd := exec.Command("nvim", path)
 		cmd.Stdin = os.Stdin
@@ -138,4 +165,19 @@ func openInNvim(path string, app *tview.Application) error {
 		cmd.Run()
 	})
 	return nil
+}
+
+func IsDirectoryEmpty(path string) (bool, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+
+	// Read just one entry. If error is EOF, directory is empty
+	_, err = f.Readdirnames(1)
+	if err == io.EOF {
+		return true, nil
+	}
+	return false, err
 }

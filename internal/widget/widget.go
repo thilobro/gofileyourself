@@ -12,7 +12,6 @@ type WidgetInterface interface {
 	Draw()
 	SetupKeyBindings()
 	Root() tview.Primitive
-	UpdateCurrentPath(newCurrentPath string) error
 }
 
 type Factory interface {

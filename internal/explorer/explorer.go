@@ -2,6 +2,7 @@ package explorer
 
 import (
 	"gofileyourself/internal/formatter"
+	"gofileyourself/internal/helper"
 	"gofileyourself/internal/theme"
 	"gofileyourself/internal/widget"
 	"os"
@@ -89,10 +90,6 @@ func (fe *FileExplorer) applyTheme() {
 	}
 }
 
-func (fe *FileExplorer) UpdateCurrentPath(path string) error {
-	return fe.setCurrentDirectory(path)
-}
-
 // NewFileExplorer creates and initializes a new FileExplorer
 func NewFileExplorer(context *widget.Context) (*FileExplorer, error) {
 	fe := &FileExplorer{
@@ -119,7 +116,7 @@ func NewFileExplorer(context *widget.Context) (*FileExplorer, error) {
 // initialize sets up the initial state of the FileExplorer
 func (fe *FileExplorer) initialize() error {
 	fe.SetupKeyBindings()
-	fe.setCurrentDirectory(".")
+	fe.setCurrentDirectory(fe.context.CurrentPath)
 	fe.currentFocusedWidget = fe.currentList
 	fe.Draw()
 	return nil
@@ -154,15 +151,20 @@ func (fe *FileExplorer) Draw() {
 // setSelectedDirectory updates the selected directory/file preview
 func (fe *FileExplorer) setSelectedDirectory(selectedPath string) error {
 	selectedAbsolutePath, _ := filepath.Abs(selectedPath)
+	isDirEmpty, _ := helper.IsDirectoryEmpty(selectedAbsolutePath)
+	if isDirEmpty {
+		fe.selectedList = tview.NewTextArea().SetText("Directory is empty", false)
+		return nil
+	}
 	selectedDirectoryIndex := fe.directoryToIndexMap[selectedAbsolutePath]
 
-	newSelectedList, err := loadDirectory(selectedPath, fe.showHiddenFiles)
+	newSelectedList, err := helper.LoadDirectory(selectedPath, fe.showHiddenFiles, false)
 	if err != nil {
 		return err
 	}
 
 	if newSelectedList == nil {
-		fe.selectedList, err = loadFilePreview(selectedPath)
+		fe.selectedList, err = helper.LoadFilePreview(selectedPath)
 		if err != nil {
 			return err
 		}
@@ -180,12 +182,12 @@ func (fe *FileExplorer) setParentDirectory(path string) error {
 		fe.parentList = emptyList
 	} else {
 		parentPath := filepath.Join(currentAbsolutePath, "..")
-		newParentList, err := loadDirectory(parentPath, fe.showHiddenFiles)
+		newParentList, err := helper.LoadDirectory(parentPath, fe.showHiddenFiles, false)
 		if err != nil {
 			return err
 		}
 
-		parentDirectoryIndex := findExactItem(newParentList, filepath.Base(currentAbsolutePath))
+		parentDirectoryIndex := helper.FindExactItem(newParentList, filepath.Base(currentAbsolutePath))
 
 		parentAbsolutePath, _ := filepath.Abs(parentPath)
 		fe.directoryToIndexMap[parentAbsolutePath] = parentDirectoryIndex
@@ -197,10 +199,15 @@ func (fe *FileExplorer) setParentDirectory(path string) error {
 
 // setCurrentDirectory changes the current directory and updates related views
 func (fe *FileExplorer) setCurrentDirectory(path string) error {
+	isDirEmpty, _ := helper.IsDirectoryEmpty(path)
+	if isDirEmpty {
+		return nil
+	}
+
 	// Update current directory
 	currentAbsolutePath, _ := filepath.Abs(path)
 	currentDirectoryIndex := fe.directoryToIndexMap[currentAbsolutePath]
-	newCurrentList, err := loadDirectory(currentAbsolutePath, fe.showHiddenFiles)
+	newCurrentList, err := helper.LoadDirectory(currentAbsolutePath, fe.showHiddenFiles, false)
 	if err != nil {
 		return err
 	}
@@ -311,13 +318,13 @@ func (fe *FileExplorer) SetupKeyBindings() {
 			}
 
 			// Restore current selection
-			if idx := findExactItem(fe.currentList, currentName); idx >= 0 {
+			if idx := helper.FindExactItem(fe.currentList, currentName); idx >= 0 {
 				fe.setCurrentLine(idx)
 			}
 
 			// Restore selected directory selection if applicable
 			if list, ok := fe.selectedList.(*tview.List); ok {
-				if idx := findExactItem(list, selectedName); idx >= 0 {
+				if idx := helper.FindExactItem(list, selectedName); idx >= 0 {
 					list.SetCurrentItem(idx)
 					absoluteSelectedPath, _ := filepath.Abs(filepath.Join(fe.context.CurrentPath, currentName))
 					fe.directoryToIndexMap[absoluteSelectedPath] = idx
@@ -348,7 +355,7 @@ func (fe *FileExplorer) SetupKeyBindings() {
 					return event
 				}
 			} else {
-				openInNvim(filePath, fe.context.App)
+				helper.OpenInNvim(filePath, fe.context.App)
 				return nil
 			}
 			return nil
@@ -396,5 +403,5 @@ func (fe *FileExplorer) SetupKeyBindings() {
 
 // Run starts the file explorer
 func (fe *FileExplorer) Run() error {
-	return fe.context.App.SetRoot(fe.rootFlex, true).Run()
+	return fe.context.App.SetRoot(fe.Root(), true).Run()
 }
