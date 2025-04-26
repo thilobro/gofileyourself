@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"os/exec"
+	"sort"
 
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/lexers"
@@ -18,7 +19,7 @@ func findExactItem(list *tview.List, searchTerm string) int {
 		return matchingIndeces[0]
 	}
 	for _, index := range matchingIndeces {
-		if text, _ := list.GetItemText(index); text == searchTerm {
+		if _, secondaryText := list.GetItemText(index); secondaryText == searchTerm {
 			return index
 		}
 	}
@@ -36,13 +37,45 @@ func loadDirectory(path string, showHiddenFiles bool) (*tview.List, error) {
 		if err != nil {
 			return nil, err
 		}
-		list := tview.NewList().ShowSecondaryText(false)
+
+		// Convert to slice for sorting
+		fileSlice := make([]os.DirEntry, 0)
 		for _, file := range files {
 			fileName := file.Name()
 			if !showHiddenFiles && len(fileName) > 0 && fileName[0] == '.' {
 				continue
 			}
-			list.AddItem(file.Name(), "", 0, nil)
+			fileSlice = append(fileSlice, file)
+		}
+
+		// Sort: directories first, then alphabetically
+		sort.Slice(fileSlice, func(i, j int) bool {
+			iIsDir := fileSlice[i].IsDir()
+			jIsDir := fileSlice[j].IsDir()
+			// If both are directories or both are files, sort by name
+			if iIsDir == jIsDir {
+				return fileSlice[i].Name() < fileSlice[j].Name()
+			}
+			// If i is a directory and j isn't, i should come first
+			return iIsDir
+		})
+
+		list := tview.NewList().ShowSecondaryText(false)
+		for _, file := range fileSlice {
+			info, err := file.Info()
+			if err != nil {
+				continue
+			}
+
+			fileName := file.Name()
+			displayName := fileName
+			if file.IsDir() {
+				displayName = fileName + "/"
+			} else if info.Mode()&0111 != 0 {
+				displayName = fileName + "*"
+			}
+
+			list.AddItem(displayName, fileName, 0, nil)
 		}
 		return list, nil
 	}

@@ -2,7 +2,10 @@ package main
 
 import (
 	"flag"
+	"gofileyourself/internal/display"
 	"gofileyourself/internal/explorer"
+	"gofileyourself/internal/finder"
+	"gofileyourself/internal/widget"
 	"io"
 	"log"
 	"os"
@@ -25,13 +28,19 @@ func main() {
 	} else {
 		log.SetOutput(io.Discard)
 	}
+	//
+	// Set up the factories for each mode
+	factories := map[display.Mode]widget.Factory{
+		display.Explorer: &explorer.Factory{},
+		display.Find:     &finder.Factory{},
+	}
 
-	fe, err := explorer.NewFileExplorer()
+	display, err := display.NewDisplay(factories)
 	if err != nil {
 		panic(err)
 	}
 
-	if err := fe.Run(); err != nil {
+	if err := display.Run(); err != nil {
 		panic(err)
 	}
 }

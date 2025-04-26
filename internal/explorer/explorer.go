@@ -3,6 +3,7 @@ package explorer
 import (
 	"gofileyourself/internal/formatter"
 	"gofileyourself/internal/theme"
+	"gofileyourself/internal/widget"
 	"os"
 	"path/filepath"
 
@@ -16,8 +17,7 @@ func init() {
 
 // FileExplorer represents the state and behavior of the file explorer
 type FileExplorer struct {
-	app                  *tview.Application
-	currentPath          string
+	context              *widget.Context
 	currentList          *tview.List
 	parentList           tview.Primitive
 	selectedList         tview.Primitive
@@ -32,6 +32,10 @@ type FileExplorer struct {
 	currentFocusedWidget tview.Primitive
 }
 
+func (fe *FileExplorer) Root() tview.Primitive {
+	return fe.rootFlex
+}
+
 func (fe *FileExplorer) applyTheme() {
 	explorerTheme := theme.GetExplorerTheme()
 
@@ -42,7 +46,7 @@ func (fe *FileExplorer) applyTheme() {
 	// Style the lists
 	fe.currentList.
 		SetMainTextColor(explorerTheme.Fg1).
-		SetSelectedTextColor(explorerTheme.Bg0).
+		SetSelectedTextColor(explorerTheme.Black).
 		SetSelectedBackgroundColor(explorerTheme.Aqua).
 		SetBackgroundColor(explorerTheme.Bg0)
 
@@ -50,7 +54,7 @@ func (fe *FileExplorer) applyTheme() {
 		if list, ok := fe.parentList.(*tview.List); ok {
 			list.
 				SetMainTextColor(explorerTheme.Fg1).
-				SetSelectedTextColor(explorerTheme.Bg0).
+				SetSelectedTextColor(explorerTheme.Black).
 				SetSelectedBackgroundColor(explorerTheme.Blue).
 				SetBackgroundColor(explorerTheme.Bg0)
 		}
@@ -60,7 +64,7 @@ func (fe *FileExplorer) applyTheme() {
 	if list, ok := fe.selectedList.(*tview.List); ok {
 		list.
 			SetMainTextColor(explorerTheme.Fg1).
-			SetSelectedTextColor(explorerTheme.Bg0).
+			SetSelectedTextColor(explorerTheme.Black).
 			SetSelectedBackgroundColor(explorerTheme.Green).
 			SetBackgroundColor(explorerTheme.Bg0)
 	} else if textView, ok := fe.selectedList.(*tview.TextView); ok {
@@ -85,16 +89,14 @@ func (fe *FileExplorer) applyTheme() {
 	}
 }
 
-// NewFileExplorer creates and initializes a new FileExplorer
-func NewFileExplorer() (*FileExplorer, error) {
-	currentPath, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
+func (fe *FileExplorer) UpdateCurrentPath(path string) error {
+	return fe.setCurrentDirectory(path)
+}
 
+// NewFileExplorer creates and initializes a new FileExplorer
+func NewFileExplorer(context *widget.Context) (*FileExplorer, error) {
 	fe := &FileExplorer{
-		app:                 tview.NewApplication(),
-		currentPath:         currentPath,
+		context:             context,
 		currentList:         tview.NewList(),
 		parentList:          tview.NewList(),
 		selectedList:        tview.NewList(),
@@ -116,15 +118,15 @@ func NewFileExplorer() (*FileExplorer, error) {
 
 // initialize sets up the initial state of the FileExplorer
 func (fe *FileExplorer) initialize() error {
-	fe.setupKeyBindings()
+	fe.SetupKeyBindings()
 	fe.setCurrentDirectory(".")
 	fe.currentFocusedWidget = fe.currentList
-	fe.draw()
+	fe.Draw()
 	return nil
 }
 
 // draw updates the UI
-func (fe *FileExplorer) draw() {
+func (fe *FileExplorer) Draw() {
 	fe.listFlex.Clear()
 	if fe.parentList != nil {
 		fe.listFlex.AddItem(fe.parentList, 0, 1, false)
@@ -144,8 +146,8 @@ func (fe *FileExplorer) draw() {
 	if fe.footer != nil {
 		fe.rootFlex.AddItem(fe.footer, 1, 0, false)
 	}
-	fe.app.SetRoot(fe.rootFlex, true)
-	fe.app.SetFocus(fe.currentFocusedWidget)
+	fe.context.App.SetRoot(fe.rootFlex, true)
+	fe.context.App.SetFocus(fe.currentFocusedWidget)
 	fe.applyTheme()
 }
 
@@ -213,7 +215,7 @@ func (fe *FileExplorer) setCurrentDirectory(path string) error {
 	fe.setParentDirectory(currentAbsolutePath)
 
 	// Update selected directory
-	selectedName, _ := fe.currentList.GetItemText(currentDirectoryIndex)
+	_, selectedName := fe.currentList.GetItemText(currentDirectoryIndex)
 	selectedPath := filepath.Join(currentAbsolutePath, selectedName)
 	if err := fe.setSelectedDirectory(selectedPath); err != nil {
 		return err
@@ -223,7 +225,7 @@ func (fe *FileExplorer) setCurrentDirectory(path string) error {
 	fe.setHeader(currentAbsolutePath)
 
 	fe.searchInCurrentDirectory()
-	fe.currentPath = currentAbsolutePath
+	fe.context.CurrentPath = currentAbsolutePath
 	fe.currentFocusedWidget = fe.currentList
 	return nil
 }
@@ -238,11 +240,11 @@ func (fe *FileExplorer) setCurrentLine(lineIndex int) error {
 		return nil
 	}
 	fe.currentList.SetCurrentItem(lineIndex)
-	currentAbsolutePath, _ := filepath.Abs(fe.currentPath)
+	currentAbsolutePath, _ := filepath.Abs(fe.context.CurrentPath)
 	fe.directoryToIndexMap[currentAbsolutePath] = lineIndex
 
-	selectedName, _ := fe.currentList.GetItemText(lineIndex)
-	return fe.setSelectedDirectory(filepath.Join(fe.currentPath, selectedName))
+	_, selectedName := fe.currentList.GetItemText(lineIndex)
+	return fe.setSelectedDirectory(filepath.Join(fe.context.CurrentPath, selectedName))
 }
 
 func (fe *FileExplorer) searchInCurrentDirectory() {
@@ -264,7 +266,7 @@ func (fe *FileExplorer) runFooterCommand(inputText string) {
 		command := inputText[1:]
 		switch command {
 		case "q":
-			fe.app.Stop()
+			fe.context.App.Stop()
 		}
 	}
 	fe.currentFocusedWidget = fe.currentList
@@ -279,32 +281,32 @@ func (fe *FileExplorer) handleFooterInput(prompt string) {
 				fe.runFooterCommand(inputText)
 				fe.currentFocusedWidget = fe.currentList
 			}
-			fe.draw()
+			fe.Draw()
 		},
 	)
 	fe.currentFocusedWidget = fe.footer
-	fe.draw()
+	fe.Draw()
 }
 
 // setupKeyBindings configures keyboard input handling
-func (fe *FileExplorer) setupKeyBindings() {
+func (fe *FileExplorer) SetupKeyBindings() {
 	fe.currentList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		defer fe.draw()
+		defer fe.Draw()
 		switch event.Key() {
 		case tcell.KeyCtrlH:
 			fe.showHiddenFiles = !fe.showHiddenFiles
 
 			// Remember current selection before refresh
-			currentName, _ := fe.currentList.GetItemText(fe.currentList.GetCurrentItem())
+			_, currentName := fe.currentList.GetItemText(fe.currentList.GetCurrentItem())
 
 			// Remember selected directory name if we're showing a directory
 			var selectedName string
 			if list, ok := fe.selectedList.(*tview.List); ok {
-				selectedName, _ = list.GetItemText(list.GetCurrentItem())
+				_, selectedName = list.GetItemText(list.GetCurrentItem())
 			}
 
 			// Refresh the view
-			if err := fe.setCurrentDirectory(fe.currentPath); err != nil {
+			if err := fe.setCurrentDirectory(fe.context.CurrentPath); err != nil {
 				return event
 			}
 
@@ -317,7 +319,7 @@ func (fe *FileExplorer) setupKeyBindings() {
 			if list, ok := fe.selectedList.(*tview.List); ok {
 				if idx := findExactItem(list, selectedName); idx >= 0 {
 					list.SetCurrentItem(idx)
-					absoluteSelectedPath, _ := filepath.Abs(filepath.Join(fe.currentPath, currentName))
+					absoluteSelectedPath, _ := filepath.Abs(filepath.Join(fe.context.CurrentPath, currentName))
 					fe.directoryToIndexMap[absoluteSelectedPath] = idx
 				}
 			}
@@ -331,12 +333,12 @@ func (fe *FileExplorer) setupKeyBindings() {
 			fe.setCurrentLine(fe.currentList.GetCurrentItem() - 1)
 			return nil
 		case 'q': // quit
-			fe.app.Stop()
+			fe.context.App.Stop()
 			return nil
 		case 'l': // open dir or file
 			currentItem := fe.currentList.GetCurrentItem()
-			fileName, _ := fe.currentList.GetItemText(currentItem)
-			filePath := filepath.Join(fe.currentPath, fileName)
+			_, fileName := fe.currentList.GetItemText(currentItem)
+			filePath := filepath.Join(fe.context.CurrentPath, fileName)
 			fileInfo, err := os.Stat(filePath)
 			if err != nil {
 				return event
@@ -346,12 +348,12 @@ func (fe *FileExplorer) setupKeyBindings() {
 					return event
 				}
 			} else {
-				openInNvim(filePath, fe.app)
+				openInNvim(filePath, fe.context.App)
 				return nil
 			}
 			return nil
 		case 'h': // go up directory
-			dirPath := filepath.Join(fe.currentPath, "..")
+			dirPath := filepath.Join(fe.context.CurrentPath, "..")
 			if err := fe.setCurrentDirectory(dirPath); err != nil {
 				return event
 			}
@@ -394,5 +396,5 @@ func (fe *FileExplorer) setupKeyBindings() {
 
 // Run starts the file explorer
 func (fe *FileExplorer) Run() error {
-	return fe.app.SetRoot(fe.rootFlex, true).Run()
+	return fe.context.App.SetRoot(fe.rootFlex, true).Run()
 }

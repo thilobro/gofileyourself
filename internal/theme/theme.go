@@ -18,6 +18,7 @@ type ExplorerTheme struct {
 	Purple tcell.Color
 	Aqua   tcell.Color
 	Orange tcell.Color
+	Black  tcell.Color
 }
 
 func GetExplorerTheme() *ExplorerTheme {
@@ -34,6 +35,7 @@ func GetExplorerTheme() *ExplorerTheme {
 		Purple: tcell.NewRGBColor(211, 134, 155), // #d3869b
 		Aqua:   tcell.NewRGBColor(142, 192, 124), // #8ec07c
 		Orange: tcell.NewRGBColor(254, 128, 25),  // #fe8019
+		Black:  tcell.NewRGBColor(0, 0, 0),       // #000000
 	}
 }
 
