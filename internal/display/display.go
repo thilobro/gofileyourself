@@ -25,7 +25,6 @@ type Display struct {
 
 // setupKeyBindings configures keyboard input handling
 func (display *Display) setupKeyBindings() {
-	display.activeWidget.SetupKeyBindings()
 	display.context.App.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyCtrlF:

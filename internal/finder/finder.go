@@ -4,9 +4,11 @@ import (
 	"gofileyourself/internal/helper"
 	"gofileyourself/internal/theme"
 	"gofileyourself/internal/widget"
+	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/rivo/tview"
 )
@@ -23,6 +25,7 @@ type Finder struct {
 	rootFlex             *tview.Flex
 	footer               *tview.InputField
 	fileList             *tview.List
+	selectedList         tview.Primitive
 	currentFocusedWidget tview.Primitive
 	showHiddenFiles      bool
 }
@@ -33,16 +36,72 @@ func NewFinder(context *widget.Context) (*Finder, error) {
 		rootFlex:        tview.NewFlex(),
 		footer:          tview.NewInputField(),
 		fileList:        tview.NewList(),
+		selectedList:    tview.NewList(),
 		showHiddenFiles: false,
 	}
+	finder.SetupKeyBindings()
 	finder.currentFocusedWidget = finder.fileList
 
-	err := finder.searchInDirectory(finder.context.CurrentPath)
+	err := finder.searchInDirectory()
 	if err != nil {
 		return nil, err
 	}
 
 	return finder, nil
+}
+
+func (finder *Finder) setCurrentLine(lineIndex int) error {
+	if lineIndex < 0 || lineIndex >= finder.fileList.GetItemCount() {
+		return nil
+	}
+	finder.fileList.SetCurrentItem(lineIndex)
+
+	_, selectedName := finder.fileList.GetItemText(lineIndex)
+	return finder.setSelectedDirectory(filepath.Join(finder.context.CurrentPath, selectedName))
+}
+
+// setSelectedDirectory updates the selected directory/file preview
+func (finder *Finder) setSelectedDirectory(selectedPath string) error {
+	selectedAbsolutePath, _ := filepath.Abs(selectedPath)
+	isDirEmpty, _ := helper.IsDirectoryEmpty(selectedAbsolutePath)
+	if isDirEmpty {
+		finder.selectedList = tview.NewTextArea().SetText("Directory is empty", false)
+		return nil
+	}
+	selectedDirectoryIndex := 0
+
+	newSelectedList, err := helper.LoadDirectory(selectedPath, finder.showHiddenFiles, false)
+	if err != nil {
+		return err
+	}
+
+	if newSelectedList == nil {
+		finder.selectedList, err = helper.LoadFilePreview(selectedPath)
+		if err != nil {
+			return err
+		}
+	} else {
+		newSelectedList.SetCurrentItem(selectedDirectoryIndex)
+		finder.selectedList = newSelectedList
+	}
+	return nil
+}
+
+func (finder *Finder) SetupKeyBindings() {
+	finder.rootFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		defer finder.Draw()
+		switch event.Key() {
+		case tcell.KeyUp:
+			finder.setCurrentLine(finder.fileList.GetCurrentItem() - 1)
+			return nil
+		case tcell.KeyDown:
+			finder.setCurrentLine(finder.fileList.GetCurrentItem() + 1)
+			return nil
+			// case tcell.KeyCtrlH:
+			// 	finder.toggleHiddenFiles()
+		}
+		return event
+	})
 }
 
 func (finder *Finder) handleFooterInput() {
@@ -86,6 +145,7 @@ func (finder *Finder) fuzzySearch(text string) {
 			finder.fileList.AddItem(item.displayText, item.text, 0, nil)
 		}
 	}
+	finder.setCurrentLine(0)
 
 	finder.Draw()
 }
@@ -100,8 +160,9 @@ func (finder *Finder) resetFileList() error {
 	return nil
 }
 
-func (finder *Finder) searchInDirectory(path string) error {
+func (finder *Finder) searchInDirectory() error {
 	finder.resetFileList()
+	finder.setCurrentLine(0)
 	finder.Draw()
 	finder.handleFooterInput()
 	return nil
@@ -113,8 +174,13 @@ func (finder *Finder) Root() tview.Primitive {
 
 func (finder *Finder) Draw() {
 	finder.rootFlex.Clear()
-	finder.rootFlex.AddItem(finder.fileList, 0, 1, true)
+	listFlex := tview.NewFlex()
+	listFlex.AddItem(finder.fileList, 0, 1, true)
+	if finder.selectedList != nil {
+		listFlex.AddItem(finder.selectedList, 0, 1, true)
+	}
 	finder.rootFlex.SetDirection(tview.FlexRow)
+	finder.rootFlex.AddItem(listFlex, 0, 1, true)
 	if finder.footer != nil {
 		finder.rootFlex.AddItem(finder.footer, 1, 0, false)
 	}
@@ -124,9 +190,6 @@ func (finder *Finder) Draw() {
 
 func (finder *Finder) Run() error {
 	return finder.context.App.SetRoot(finder.Root(), true).Run()
-}
-
-func (finder *Finder) SetupKeyBindings() {
 }
 
 func (finder *Finder) applyTheme() {
