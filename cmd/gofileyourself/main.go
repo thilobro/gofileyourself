@@ -2,13 +2,14 @@ package main
 
 import (
 	"flag"
-	"gofileyourself/internal/display"
-	"gofileyourself/internal/explorer"
-	"gofileyourself/internal/finder"
-	"gofileyourself/internal/widget"
 	"io"
 	"log"
 	"os"
+
+	"github.com/thilobro/gofileyourself/internal/display"
+	"github.com/thilobro/gofileyourself/internal/explorer"
+	"github.com/thilobro/gofileyourself/internal/finder"
+	"github.com/thilobro/gofileyourself/internal/widget"
 )
 
 func main() {

@@ -1,12 +1,13 @@
 package explorer
 
 import (
-	"gofileyourself/internal/formatter"
-	"gofileyourself/internal/helper"
-	"gofileyourself/internal/theme"
-	"gofileyourself/internal/widget"
 	"os"
 	"path/filepath"
+
+	"github.com/thilobro/gofileyourself/internal/formatter"
+	"github.com/thilobro/gofileyourself/internal/helper"
+	"github.com/thilobro/gofileyourself/internal/theme"
+	"github.com/thilobro/gofileyourself/internal/widget"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
