@@ -97,8 +97,12 @@ func (finder *Finder) SetupKeyBindings() {
 		case tcell.KeyDown:
 			finder.setCurrentLine(finder.fileList.GetCurrentItem() + 1)
 			return nil
-			// case tcell.KeyCtrlH:
-			// 	finder.toggleHiddenFiles()
+		case tcell.KeyEnter:
+			currentItem := finder.fileList.GetCurrentItem()
+			_, fileName := finder.fileList.GetItemText(currentItem)
+			filePath := filepath.Join(finder.context.CurrentPath, fileName)
+			helper.OpenInNvim(filePath, finder.context.App)
+			return nil
 		}
 		return event
 	})
