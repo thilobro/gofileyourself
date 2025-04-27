@@ -5,26 +5,19 @@ import (
 	"gofileyourself/internal/theme"
 	"gofileyourself/internal/widget"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/rivo/tview"
+	"github.com/sahilm/fuzzy"
 )
-
-type rankedItem struct {
-	index       int
-	rank        int
-	displayText string
-	text        string
-}
 
 type Finder struct {
 	context              *widget.Context
 	rootFlex             *tview.Flex
 	footer               *tview.InputField
 	fileList             *tview.List
+	searchedList         *tview.List
 	selectedList         tview.Primitive
 	currentFocusedWidget tview.Primitive
 	showHiddenFiles      bool
@@ -36,11 +29,13 @@ func NewFinder(context *widget.Context) (*Finder, error) {
 		rootFlex:        tview.NewFlex(),
 		footer:          tview.NewInputField(),
 		fileList:        tview.NewList(),
-		selectedList:    tview.NewList(),
+		selectedList:    tview.NewList().ShowSecondaryText(false),
 		showHiddenFiles: false,
 	}
+	finder.resetFileList()
+	finder.searchedList = finder.fileList
 	finder.SetupKeyBindings()
-	finder.currentFocusedWidget = finder.fileList
+	finder.currentFocusedWidget = finder.searchedList
 
 	err := finder.searchInDirectory()
 	if err != nil {
@@ -51,12 +46,12 @@ func NewFinder(context *widget.Context) (*Finder, error) {
 }
 
 func (finder *Finder) setCurrentLine(lineIndex int) error {
-	if lineIndex < 0 || lineIndex >= finder.fileList.GetItemCount() {
+	if lineIndex < 0 || lineIndex >= finder.searchedList.GetItemCount() {
 		return nil
 	}
-	finder.fileList.SetCurrentItem(lineIndex)
+	finder.searchedList.SetCurrentItem(lineIndex)
 
-	_, selectedName := finder.fileList.GetItemText(lineIndex)
+	_, selectedName := finder.searchedList.GetItemText(lineIndex)
 	return finder.setSelectedDirectory(filepath.Join(finder.context.CurrentPath, selectedName))
 }
 
@@ -92,10 +87,10 @@ func (finder *Finder) SetupKeyBindings() {
 		defer finder.Draw()
 		switch event.Key() {
 		case tcell.KeyUp:
-			finder.setCurrentLine(finder.fileList.GetCurrentItem() - 1)
+			finder.setCurrentLine(finder.searchedList.GetCurrentItem() - 1)
 			return nil
 		case tcell.KeyDown:
-			finder.setCurrentLine(finder.fileList.GetCurrentItem() + 1)
+			finder.setCurrentLine(finder.searchedList.GetCurrentItem() + 1)
 			return nil
 		case tcell.KeyEnter:
 			currentItem := finder.fileList.GetCurrentItem()
@@ -103,19 +98,30 @@ func (finder *Finder) SetupKeyBindings() {
 			filePath := filepath.Join(finder.context.CurrentPath, fileName)
 			helper.OpenInNvim(filePath, finder.context.App)
 			return nil
+
 		}
+
+		if finder.footer == nil {
+			finder.handleFooterInput()
+		}
+		finder.currentFocusedWidget = finder.footer
 		return event
 	})
 }
 
 func (finder *Finder) handleFooterInput() {
 	finder.footer = tview.NewInputField().SetText("/")
+	finder.searchedList = finder.fileList
 	finder.footer.SetChangedFunc(
 		func(text string) {
-			currentInput := strings.TrimPrefix(text, "/")
+			defer finder.Draw()
 			finder.resetFileList()
+			if text == "/" {
+				finder.searchedList = finder.fileList
+				return
+			}
+			currentInput := strings.TrimPrefix(text, "/")
 			finder.fuzzySearch(currentInput)
-			finder.Draw()
 		},
 	)
 	finder.currentFocusedWidget = finder.footer
@@ -123,33 +129,61 @@ func (finder *Finder) handleFooterInput() {
 }
 
 func (finder *Finder) fuzzySearch(text string) {
-	items := make([]rankedItem, finder.fileList.GetItemCount())
-
-	// Collect all items with their ranks
+	itemNames := make([]string, finder.fileList.GetItemCount())
 	for i := 0; i < finder.fileList.GetItemCount(); i++ {
-		itemDisplayName, itemName := finder.fileList.GetItemText(i)
-		rank := fuzzy.RankMatch(text, itemName)
-		items[i] = rankedItem{
-			index:       i,
-			rank:        rank,
-			text:        itemName,
-			displayText: itemDisplayName,
-		}
+		_, itemName := finder.fileList.GetItemText(i)
+		itemNames[i] = itemName
 	}
 
-	// Sort items by rank (higher rank = better match)
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].rank > items[j].rank
-	})
-
-	// Clear and rebuild the list in sorted order
-	finder.fileList.Clear()
-	for _, item := range items {
-		if item.rank > -1 { // Only show matching items
-			finder.fileList.AddItem(item.displayText, item.text, 0, nil)
-		}
+	// Split the search text into patterns
+	patterns := strings.Fields(text)
+	if len(patterns) == 0 {
+		return
 	}
-	finder.setCurrentLine(0)
+
+	// Start with all matches from the first pattern
+	matches := fuzzy.Find(patterns[0], itemNames)
+	matchedStrs := make([]string, len(matches))
+	for i, match := range matches {
+		matchedStrs[i] = match.Str
+	}
+
+	// Keep track of all matched indexes for each string
+	allMatchedIndexes := make(map[string][]int)
+	for _, match := range matches {
+		allMatchedIndexes[match.Str] = match.MatchedIndexes
+	}
+
+	// Filter through remaining patterns and collect their matched indexes
+	for _, pattern := range patterns[1:] {
+		matches = fuzzy.Find(pattern, matchedStrs)
+		newMatchedStrs := make([]string, len(matches))
+		for i, match := range matches {
+			newMatchedStrs[i] = match.Str
+			// Append new matched indexes to existing ones
+			allMatchedIndexes[match.Str] = append(allMatchedIndexes[match.Str], match.MatchedIndexes...)
+		}
+		matchedStrs = newMatchedStrs
+	}
+
+	// Clear and rebuild the list with final matches
+	finder.searchedList.Clear()
+	line := ""
+	for _, match := range matches {
+		for i := 0; i < len(match.Str); i++ {
+			if helper.Contains(i, allMatchedIndexes[match.Str]) {
+				line = line + "[red::b]" + string(match.Str[i]) + "[-::-]"
+			} else {
+				line = line + string(match.Str[i])
+			}
+		}
+		finder.searchedList.AddItem(line, match.Str, 0, nil)
+		line = ""
+	}
+
+	if len(matches) > 0 {
+		finder.setCurrentLine(0)
+	}
 
 	finder.Draw()
 }
@@ -179,7 +213,7 @@ func (finder *Finder) Root() tview.Primitive {
 func (finder *Finder) Draw() {
 	finder.rootFlex.Clear()
 	listFlex := tview.NewFlex()
-	listFlex.AddItem(finder.fileList, 0, 1, true)
+	listFlex.AddItem(finder.searchedList, 0, 1, true)
 	if finder.selectedList != nil {
 		listFlex.AddItem(finder.selectedList, 0, 1, true)
 	}

@@ -181,3 +181,12 @@ func IsDirectoryEmpty(path string) (bool, error) {
 	}
 	return false, err
 }
+
+func Contains(needle int, haystack []int) bool {
+	for _, i := range haystack {
+		if needle == i {
+			return true
+		}
+	}
+	return false
+}
