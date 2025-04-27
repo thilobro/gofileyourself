@@ -1,4 +1,4 @@
-module gofileyourself
+module github.com/thilobro/gofileyourself
 
 go 1.22.1
 

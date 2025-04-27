@@ -1,8 +1,9 @@
 package display
 
 import (
-	"gofileyourself/internal/widget"
 	"os"
+
+	"github.com/thilobro/gofileyourself/internal/widget"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"

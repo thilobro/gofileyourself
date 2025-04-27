@@ -2,8 +2,9 @@ package formatter
 
 import (
 	"fmt"
-	"gofileyourself/internal/theme"
 	"io"
+
+	"github.com/thilobro/gofileyourself/internal/theme"
 
 	"github.com/alecthomas/chroma"
 	"github.com/alecthomas/chroma/formatters"

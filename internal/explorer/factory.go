@@ -1,7 +1,7 @@
 package explorer
 
 import (
-	"gofileyourself/internal/widget"
+	"github.com/thilobro/gofileyourself/internal/widget"
 )
 
 type Factory struct{}
