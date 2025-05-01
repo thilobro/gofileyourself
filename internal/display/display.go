@@ -71,8 +71,9 @@ func NewDisplay(factories map[Mode]widget.Factory) (*Display, error) {
 	}
 
 	context := &widget.Context{
-		App:         app,
-		CurrentPath: currentPath,
+		App:             app,
+		CurrentPath:     currentPath,
+		ShowHiddenFiles: false,
 	}
 
 	explorerFactory := factories[Explorer]

@@ -28,7 +28,6 @@ type FileExplorer struct {
 	directoryToIndexMap  map[string]int
 	footer               *tview.InputField
 	header               *tview.TextView
-	showHiddenFiles      bool
 	currentSearchTerm    string
 	currentSearchIndeces []int
 	currentFocusedWidget tview.Primitive
@@ -103,7 +102,6 @@ func NewFileExplorer(context *widget.Context) (*FileExplorer, error) {
 		rootFlex:            tview.NewFlex(),
 		footer:              tview.NewInputField(),
 		header:              tview.NewTextView(),
-		showHiddenFiles:     false,
 		currentSearchTerm:   "",
 	}
 
@@ -159,7 +157,7 @@ func (fe *FileExplorer) setSelectedDirectory(selectedPath string) error {
 	}
 	selectedDirectoryIndex := fe.directoryToIndexMap[selectedAbsolutePath]
 
-	newSelectedList, err := helper.LoadDirectory(selectedPath, fe.showHiddenFiles, false)
+	newSelectedList, err := helper.LoadDirectory(selectedPath, fe.context.ShowHiddenFiles, false)
 	if err != nil {
 		return err
 	}
@@ -183,7 +181,7 @@ func (fe *FileExplorer) setParentDirectory(path string) error {
 		fe.parentList = emptyList
 	} else {
 		parentPath := filepath.Join(currentAbsolutePath, "..")
-		newParentList, err := helper.LoadDirectory(parentPath, fe.showHiddenFiles, false)
+		newParentList, err := helper.LoadDirectory(parentPath, fe.context.ShowHiddenFiles, false)
 		if err != nil {
 			return err
 		}
@@ -208,7 +206,7 @@ func (fe *FileExplorer) setCurrentDirectory(path string) error {
 	// Update current directory
 	currentAbsolutePath, _ := filepath.Abs(path)
 	currentDirectoryIndex := fe.directoryToIndexMap[currentAbsolutePath]
-	newCurrentList, err := helper.LoadDirectory(currentAbsolutePath, fe.showHiddenFiles, false)
+	newCurrentList, err := helper.LoadDirectory(currentAbsolutePath, fe.context.ShowHiddenFiles, false)
 	if err != nil {
 		return err
 	}
@@ -302,7 +300,7 @@ func (fe *FileExplorer) SetupKeyBindings() {
 		defer fe.Draw()
 		switch event.Key() {
 		case tcell.KeyCtrlH:
-			fe.showHiddenFiles = !fe.showHiddenFiles
+			fe.context.ShowHiddenFiles = !fe.context.ShowHiddenFiles
 
 			// Remember current selection before refresh
 			_, currentName := fe.currentList.GetItemText(fe.currentList.GetCurrentItem())
