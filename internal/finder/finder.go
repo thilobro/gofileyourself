@@ -21,17 +21,17 @@ type Finder struct {
 	searchedList         *tview.List
 	selectedList         tview.Primitive
 	currentFocusedWidget tview.Primitive
-	showHiddenFiles      bool
+	searchTerm           string
 }
 
 func NewFinder(context *widget.Context) (*Finder, error) {
 	finder := &Finder{
-		context:         context,
-		rootFlex:        tview.NewFlex(),
-		footer:          tview.NewInputField(),
-		fileList:        tview.NewList(),
-		selectedList:    tview.NewList().ShowSecondaryText(false),
-		showHiddenFiles: false,
+		context:      context,
+		rootFlex:     tview.NewFlex(),
+		footer:       tview.NewInputField(),
+		fileList:     tview.NewList(),
+		selectedList: tview.NewList().ShowSecondaryText(false),
+		searchTerm:   "",
 	}
 	finder.resetFileList()
 	finder.searchedList = finder.fileList
@@ -66,7 +66,7 @@ func (finder *Finder) setSelectedDirectory(selectedPath string) error {
 	}
 	selectedDirectoryIndex := 0
 
-	newSelectedList, err := helper.LoadDirectory(selectedPath, finder.showHiddenFiles, false)
+	newSelectedList, err := helper.LoadDirectory(selectedPath, finder.context.ShowHiddenFiles, false)
 	if err != nil {
 		return err
 	}
@@ -87,6 +87,20 @@ func (finder *Finder) SetupKeyBindings() {
 	finder.rootFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		defer finder.Draw()
 		switch event.Key() {
+		case tcell.KeyCtrlH:
+			finder.context.ShowHiddenFiles = !finder.context.ShowHiddenFiles
+
+			// Remember current selection before refresh
+			_, currentName := finder.searchedList.GetItemText(finder.searchedList.GetCurrentItem())
+			finder.resetFileList()
+			finder.searchedList = finder.fileList
+
+			// Restore current selection
+			if idx := helper.FindExactItem(finder.searchedList, currentName); idx >= 0 {
+				finder.setCurrentLine(idx)
+			}
+			finder.fuzzySearch(finder.searchTerm)
+			return nil
 		case tcell.KeyUp:
 			finder.setCurrentLine(finder.searchedList.GetCurrentItem() - 1)
 			return nil
@@ -187,11 +201,12 @@ func (finder *Finder) fuzzySearch(text string) {
 	}
 
 	finder.Draw()
+	finder.searchTerm = text
 }
 
 func (finder *Finder) resetFileList() error {
 	finder.fileList.Clear()
-	fileList, err := helper.LoadDirectory(finder.context.CurrentPath, finder.showHiddenFiles, true)
+	fileList, err := helper.LoadDirectory(finder.context.CurrentPath, finder.context.ShowHiddenFiles, true)
 	if err != nil {
 		return err
 	}

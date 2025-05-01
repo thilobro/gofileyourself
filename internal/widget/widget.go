@@ -3,8 +3,9 @@ package widget
 import "github.com/rivo/tview"
 
 type Context struct {
-	App         *tview.Application
-	CurrentPath string
+	App             *tview.Application
+	CurrentPath     string
+	ShowHiddenFiles bool
 }
 
 type WidgetInterface interface {
