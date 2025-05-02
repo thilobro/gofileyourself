@@ -389,6 +389,11 @@ func (fe *FileExplorer) SetupKeyBindings() {
 		if len(fe.keyBuffer) > 5 {
 			fe.keyBuffer = fe.keyBuffer[4:]
 		}
+		if strings.HasSuffix(fe.keyBuffer, "gg") {
+			fe.keyBuffer = ""
+			fe.setCurrentLine(0)
+			return nil
+		}
 		if strings.HasSuffix(fe.keyBuffer, "dd") {
 			fe.keyBuffer = ""
 			fe.deleteCurrentFile(false)
@@ -409,6 +414,9 @@ func (fe *FileExplorer) SetupKeyBindings() {
 			return nil
 		}
 		switch rune {
+		case 'G':
+			fe.setCurrentLine(fe.currentList.GetItemCount() - 1)
+			return nil
 		case 'S':
 			fe.quitAndChangeDirectory()
 			return nil
@@ -476,7 +484,7 @@ func (fe *FileExplorer) SetupKeyBindings() {
 
 			return nil
 		}
-		return event
+		return nil
 	})
 }
 
