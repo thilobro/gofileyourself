@@ -37,6 +37,7 @@ Keys:
 - `h/l` - Go to parent directory / Enter directory or open file
 - `/` - Search in current directory
 - `q` - Quit
+- `S` - Quit and jump to last directory
 - `Ctrl-F` - Open finder
 - `yy` - Yank selected file or directory
 - `pp` - Paste yanked file or directory

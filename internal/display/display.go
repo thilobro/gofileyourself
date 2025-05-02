@@ -9,19 +9,12 @@ import (
 	"github.com/rivo/tview"
 )
 
-type Mode int
-
-const (
-	Explorer Mode = iota
-	Find
-)
-
 // Display is the main struct for the display package.
 type Display struct {
 	context       *widget.Context
-	mode          Mode
+	mode          widget.Mode
 	activeWidget  widget.WidgetInterface
-	widgetFactory map[Mode]widget.Factory
+	widgetFactory map[widget.Mode]widget.Factory
 }
 
 // setupKeyBindings configures keyboard input handling
@@ -29,27 +22,30 @@ func (display *Display) setupKeyBindings() {
 	display.context.App.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyCtrlF:
-			display.setMode(Find)
+			display.setMode(widget.Find)
 			return nil // Consume the event
 		case tcell.KeyEscape:
-			display.setMode(Explorer)
+			display.setMode(widget.Explorer)
 			return nil // Consume the event
 		}
 		// Let the active widget handle other keys
+		if display.activeWidget != nil {
+			return display.activeWidget.GetInputCapture()(event)
+		}
 		return event
 	})
-
-	// Set up widget-specific key bindings
-	display.activeWidget.SetupKeyBindings()
 }
 
-func (display *Display) setMode(mode Mode) {
+func (display *Display) setMode(mode widget.Mode) {
 	display.mode = mode
+	display.context.App.SetInputCapture(nil) // Clear any existing input capture
 	display.setActiveWidgetBasedOnMode(mode)
+	display.setupKeyBindings()
+	display.context.App.SetFocus(display.activeWidget.Root())
 	display.activeWidget.Draw()
 }
 
-func (display *Display) setActiveWidgetBasedOnMode(mode Mode) {
+func (display *Display) setActiveWidgetBasedOnMode(mode widget.Mode) {
 	factory, exists := display.widgetFactory[mode]
 	if !exists {
 		panic("no factory for mode")
@@ -63,31 +59,35 @@ func (display *Display) setActiveWidgetBasedOnMode(mode Mode) {
 	display.context.App.SetRoot(display.activeWidget.Root(), true)
 }
 
-func NewDisplay(factories map[Mode]widget.Factory) (*Display, error) {
+func NewDisplay(factories map[widget.Mode]widget.Factory) (*Display, error) {
 	app := tview.NewApplication()
 	currentPath, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
+	display := &Display{}
 
+	explorerFactory := factories[widget.Explorer]
 	context := &widget.Context{
 		App:             app,
 		CurrentPath:     currentPath,
 		ShowHiddenFiles: false,
+		OnWidgetResult:  display.onWidgetResult,
 	}
-
-	explorerFactory := factories[Explorer]
-	widget, err := explorerFactory.New(context)
+	explorerWidget, err := explorerFactory.New(context)
 	if err != nil {
 		return nil, err
 	}
+	display.context = context
+	display.activeWidget = explorerWidget
+	display.widgetFactory = factories
+	display.mode = widget.Explorer
 
-	return &Display{
-		context:       context,
-		mode:          Explorer,
-		activeWidget:  widget,
-		widgetFactory: factories,
-	}, nil
+	return display, nil
+}
+
+func (display *Display) onWidgetResult(mode widget.Mode, result string) {
+	display.setMode(widget.Explorer)
 }
 
 // Run starts the file explorer

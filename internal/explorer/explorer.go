@@ -152,6 +152,10 @@ func (fe *FileExplorer) Draw() {
 	fe.applyTheme()
 }
 
+func (fe *FileExplorer) GetInputCapture() func(*tcell.EventKey) *tcell.EventKey {
+	return fe.currentList.GetInputCapture()
+}
+
 // setSelectedDirectory updates the selected directory/file preview
 func (fe *FileExplorer) setSelectedDirectory(selectedPath string) error {
 	selectedAbsolutePath, _ := filepath.Abs(selectedPath)
@@ -299,6 +303,15 @@ func (fe *FileExplorer) handleFooterInput(prompt string) {
 	fe.Draw()
 }
 
+func (fe *FileExplorer) quitAndChangeDirectory() {
+	// Write current path to a temporary file that can be sourced by shell
+	tempFile := os.Getenv("HOME") + "/.gofileyourself_lastdir"
+	if err := os.WriteFile(tempFile, []byte(fe.context.CurrentPath), 0644); err != nil {
+		return
+	}
+	fe.context.App.Stop()
+}
+
 func (fe *FileExplorer) deleteCurrentFile(isForcedDelete bool) {
 	_, currentName := fe.currentList.GetItemText(fe.currentList.GetCurrentItem())
 	currentPath := filepath.Join(fe.context.CurrentPath, currentName)
@@ -396,6 +409,9 @@ func (fe *FileExplorer) SetupKeyBindings() {
 			return nil
 		}
 		switch rune {
+		case 'S':
+			fe.quitAndChangeDirectory()
+			return nil
 		case 'j': // scroll down
 			fe.setCurrentLine(fe.currentList.GetCurrentItem() + 1)
 			return nil
@@ -467,4 +483,9 @@ func (fe *FileExplorer) SetupKeyBindings() {
 // Run starts the file explorer
 func (fe *FileExplorer) Run() error {
 	return fe.context.App.SetRoot(fe.Root(), true).Run()
+}
+
+// GetCurrentList returns the current list widget
+func (fe *FileExplorer) GetCurrentList() *tview.List {
+	return fe.currentList
 }

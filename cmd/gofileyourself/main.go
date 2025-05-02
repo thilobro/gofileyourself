@@ -31,9 +31,9 @@ func main() {
 	}
 	//
 	// Set up the factories for each mode
-	factories := map[display.Mode]widget.Factory{
-		display.Explorer: &explorer.Factory{},
-		display.Find:     &finder.Factory{},
+	factories := map[widget.Mode]widget.Factory{
+		widget.Explorer: &explorer.Factory{},
+		widget.Find:     &finder.Factory{},
 	}
 
 	display, err := display.NewDisplay(factories)
