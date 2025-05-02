@@ -3,6 +3,7 @@ package explorer
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/thilobro/gofileyourself/internal/formatter"
 	"github.com/thilobro/gofileyourself/internal/helper"
@@ -31,6 +32,8 @@ type FileExplorer struct {
 	currentSearchTerm    string
 	currentSearchIndeces []int
 	currentFocusedWidget tview.Primitive
+	keyBuffer            string
+	yankedFile           string
 }
 
 func (fe *FileExplorer) Root() tview.Primitive {
@@ -103,6 +106,8 @@ func NewFileExplorer(context *widget.Context) (*FileExplorer, error) {
 		footer:              tview.NewInputField(),
 		header:              tview.NewTextView(),
 		currentSearchTerm:   "",
+		keyBuffer:           "",
+		yankedFile:          "",
 	}
 
 	if err := fe.initialize(); err != nil {
@@ -294,6 +299,22 @@ func (fe *FileExplorer) handleFooterInput(prompt string) {
 	fe.Draw()
 }
 
+func (fe *FileExplorer) yankCurrentFile() {
+	_, currentName := fe.currentList.GetItemText(fe.currentList.GetCurrentItem())
+	fe.yankedFile = fe.context.CurrentPath + "/" + currentName
+}
+
+func (fe *FileExplorer) pasteYankedFile() {
+	if fe.yankedFile == "" {
+		return
+	}
+	destinationPath := filepath.Join(fe.context.CurrentPath, filepath.Base(fe.yankedFile))
+	if err := helper.CopyFile(fe.yankedFile, destinationPath); err != nil {
+		return
+	}
+	fe.setCurrentDirectory(fe.context.CurrentPath)
+}
+
 // setupKeyBindings configures keyboard input handling
 func (fe *FileExplorer) SetupKeyBindings() {
 	fe.currentList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -331,7 +352,21 @@ func (fe *FileExplorer) SetupKeyBindings() {
 			}
 			return nil
 		}
-		switch event.Rune() {
+		rune := event.Rune()
+		fe.keyBuffer += string(rune)
+		if len(fe.keyBuffer) > 5 {
+			fe.keyBuffer = fe.keyBuffer[4:]
+		}
+		if strings.HasSuffix(fe.keyBuffer, "yy") {
+			fe.keyBuffer = ""
+			fe.yankCurrentFile()
+			return nil
+		} else if strings.HasSuffix(fe.keyBuffer, "pp") {
+			fe.keyBuffer = ""
+			fe.pasteYankedFile()
+			return nil
+		}
+		switch rune {
 		case 'j': // scroll down
 			fe.setCurrentLine(fe.currentList.GetCurrentItem() + 1)
 			return nil

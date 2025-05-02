@@ -7,10 +7,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/lexers"
 	"github.com/alecthomas/chroma/styles"
+	"github.com/otiai10/copy"
 	"github.com/rivo/tview"
 )
 
@@ -26,6 +28,24 @@ func FindExactItem(list *tview.List, searchTerm string) int {
 		}
 	}
 	return 0
+}
+
+func generateDuplicateFileName(path string, duplicationNumber int) string {
+	if _, err := os.Stat(path); err == nil {
+		suffix := "_" + strconv.Itoa(duplicationNumber)
+		if _, err := os.Stat(path + suffix); err == nil {
+			duplicationNumber++
+			return generateDuplicateFileName(path, duplicationNumber)
+		}
+		return path + suffix
+	}
+	return path
+}
+
+func CopyFile(src string, dst string) error {
+	dst = generateDuplicateFileName(dst, 0)
+	err := copy.Copy(src, dst)
+	return err
 }
 
 // LoadDirectory is a helper function that loads directory contents into a list
