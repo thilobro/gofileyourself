@@ -1,6 +1,7 @@
 package finder
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -111,9 +112,19 @@ func (finder *Finder) SetupKeyBindings() {
 			currentItem := finder.fileList.GetCurrentItem()
 			_, fileName := finder.fileList.GetItemText(currentItem)
 			filePath := filepath.Join(finder.context.CurrentPath, fileName)
+
+			fileInfo, err := os.Stat(filePath)
+			if err != nil {
+				return event
+			}
+
+			if fileInfo.IsDir() {
+				finder.context.CurrentPath = filePath
+				finder.context.OnWidgetResult(widget.Find, filePath)
+				return nil
+			}
 			helper.OpenInNvim(filePath, finder.context.App)
 			return nil
-
 		}
 
 		if finder.footer == nil {
@@ -266,4 +277,9 @@ func (finder *Finder) applyTheme() {
 			SetFieldTextColor(explorerTheme.Fg0).
 			SetBackgroundColor(explorerTheme.Bg0)
 	}
+}
+
+// GetInputCapture returns the input capture function for the finder
+func (finder *Finder) GetInputCapture() func(*tcell.EventKey) *tcell.EventKey {
+	return finder.rootFlex.GetInputCapture()
 }
