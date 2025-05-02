@@ -43,6 +43,7 @@ func NewFinder(context *widget.Context) (*Finder, error) {
 	if err != nil {
 		return nil, err
 	}
+	finder.setCurrentLine(0)
 
 	return finder, nil
 }
