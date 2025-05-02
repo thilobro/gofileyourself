@@ -299,6 +299,25 @@ func (fe *FileExplorer) handleFooterInput(prompt string) {
 	fe.Draw()
 }
 
+func (fe *FileExplorer) deleteCurrentFile(isForcedDelete bool) {
+	_, currentName := fe.currentList.GetItemText(fe.currentList.GetCurrentItem())
+	currentPath := filepath.Join(fe.context.CurrentPath, currentName)
+	if isForcedDelete {
+		if err := os.RemoveAll(currentPath); err != nil {
+			return
+		}
+	} else {
+		if err := os.Remove(currentPath); err != nil {
+			return
+		}
+	}
+	isDirEmpty, _ := helper.IsDirectoryEmpty(fe.context.CurrentPath)
+	if isDirEmpty {
+		fe.setCurrentDirectory(fe.context.CurrentPath + "/..")
+	}
+	fe.setCurrentDirectory(fe.context.CurrentPath)
+}
+
 func (fe *FileExplorer) yankCurrentFile() {
 	_, currentName := fe.currentList.GetItemText(fe.currentList.GetCurrentItem())
 	fe.yankedFile = fe.context.CurrentPath + "/" + currentName
@@ -356,6 +375,16 @@ func (fe *FileExplorer) SetupKeyBindings() {
 		fe.keyBuffer += string(rune)
 		if len(fe.keyBuffer) > 5 {
 			fe.keyBuffer = fe.keyBuffer[4:]
+		}
+		if strings.HasSuffix(fe.keyBuffer, "dd") {
+			fe.keyBuffer = ""
+			fe.deleteCurrentFile(false)
+			return nil
+		}
+		if strings.HasSuffix(fe.keyBuffer, "DD") {
+			fe.keyBuffer = ""
+			fe.deleteCurrentFile(true)
+			return nil
 		}
 		if strings.HasSuffix(fe.keyBuffer, "yy") {
 			fe.keyBuffer = ""

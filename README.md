@@ -23,6 +23,12 @@ gofileyourself
 
 gofileyourself is a terminal-based file manager with vim-like keybindings:
 
+### General
+
+Keys:
+
+- `Ctrl-H` - Toggle hidden files
+
 ### Explorer
 
 Keys:
@@ -32,6 +38,10 @@ Keys:
 - `/` - Search in current directory
 - `q` - Quit
 - `Ctrl-F` - Open finder
+- `yy` - Yank selected file or directory
+- `pp` - Paste yanked file or directory
+- `dd` - Delete selected file
+- `DD` - Delete selected file or directory
 
 ### Finder
 
