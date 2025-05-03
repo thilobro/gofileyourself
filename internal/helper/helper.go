@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 
@@ -49,7 +50,7 @@ func CopyFile(src string, dst string) error {
 }
 
 // LoadDirectory is a helper function that loads directory contents into a list
-func LoadDirectory(path string, showHiddenFiles bool, recursive bool) (*tview.List, error) {
+func LoadDirectory(path string, showHiddenFiles bool, recursive bool, markedItems []string) (*tview.List, error) {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -97,12 +98,16 @@ func LoadDirectory(path string, showHiddenFiles bool, recursive bool) (*tview.Li
 			}
 
 			// Get relative path from the root directory
-			relPath, err := filepath.Rel(path, filepath.Join(dirPath, file.Name()))
+			absPath := filepath.Join(dirPath, file.Name())
+			relPath, err := filepath.Rel(path, absPath)
 			if err != nil {
 				continue
 			}
 
 			displayName := relPath
+			if slices.Contains(markedItems, absPath) {
+				displayName = "m> " + displayName
+			}
 			if file.IsDir() {
 				displayName += "/"
 				if recursive {
@@ -202,11 +207,12 @@ func IsDirectoryEmpty(path string) (bool, error) {
 	return false, err
 }
 
-func Contains(needle int, haystack []int) bool {
-	for _, i := range haystack {
-		if needle == i {
-			return true
+func DeleteItem[T comparable](slice []T, element T) []T {
+	newSlice := make([]T, 0)
+	for _, v := range slice {
+		if v != element {
+			newSlice = append(newSlice, v)
 		}
 	}
-	return false
+	return newSlice
 }

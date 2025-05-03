@@ -43,6 +43,10 @@ Keys:
 - `pp` - Paste yanked file or directory
 - `dd` - Delete selected file
 - `DD` - Delete selected file or directory
+- `mm` / `M` - Toggle mark file / directory
+- `mu` - Unmark all files / directories
+- `md` - Delete marked files
+- `mD` - Delete marked files / directories
 
 ### Finder
 
