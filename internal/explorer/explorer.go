@@ -38,6 +38,7 @@ type FileExplorer struct {
 	keyBuffer            string
 	yankedFile           string
 	markedFiles          []string
+	yankedMarkedFiles    []string
 }
 
 func (fe *FileExplorer) Root() tview.Primitive {
@@ -114,6 +115,7 @@ func NewFileExplorer(context *widget.Context) (*FileExplorer, error) {
 		keyBuffer:           "",
 		yankedFile:          "",
 		markedFiles:         []string{},
+		yankedMarkedFiles:   []string{},
 	}
 
 	if err := fe.initialize(); err != nil {
@@ -422,6 +424,18 @@ func (fe *FileExplorer) unmarkAllFiles() {
 	fe.setCurrentDirectory(fe.context.CurrentPath)
 }
 
+func (fe *FileExplorer) yankMarkedFiles() {
+	fe.yankedMarkedFiles = fe.markedFiles
+}
+
+func (fe *FileExplorer) pasteMarkedFiles() {
+	for _, file := range fe.yankedMarkedFiles {
+		destinationPath := filepath.Join(fe.context.CurrentPath, filepath.Base(file))
+		helper.CopyFile(file, destinationPath)
+	}
+	fe.setCurrentDirectory(fe.context.CurrentPath)
+}
+
 // setupKeyBindings configures keyboard input handling
 func (fe *FileExplorer) SetupKeyBindings() {
 	fe.currentList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -499,6 +513,14 @@ func (fe *FileExplorer) SetupKeyBindings() {
 		} else if strings.HasSuffix(fe.keyBuffer, "mD") {
 			fe.keyBuffer = ""
 			fe.deleteMarkedFiles(true)
+			return nil
+		} else if strings.HasSuffix(fe.keyBuffer, "my") {
+			fe.keyBuffer = ""
+			fe.yankMarkedFiles()
+			return nil
+		} else if strings.HasSuffix(fe.keyBuffer, "mp") {
+			fe.keyBuffer = ""
+			fe.pasteMarkedFiles()
 			return nil
 		}
 		switch rune {

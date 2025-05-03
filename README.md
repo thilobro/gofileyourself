@@ -47,11 +47,13 @@ Keys:
 - `mu` - Unmark all files / directories
 - `md` - Delete marked files
 - `mD` - Delete marked files / directories
+- `my` - Yank marked files
+- `mp` - Paste marked files
 
 Commands:
 
 - `:q` - Quit
-- `:makdir <directory>` - Create directory
+- `:mkdir <directory>` - Create directory
 - `:rename <new name>` - Rename file
 
 ### Finder
