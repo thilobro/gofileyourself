@@ -3,6 +3,7 @@ package finder
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/thilobro/gofileyourself/internal/helper"
@@ -68,7 +69,7 @@ func (finder *Finder) setSelectedDirectory(selectedPath string) error {
 	}
 	selectedDirectoryIndex := 0
 
-	newSelectedList, err := helper.LoadDirectory(selectedPath, finder.context.ShowHiddenFiles, false)
+	newSelectedList, err := helper.LoadDirectory(selectedPath, finder.context.ShowHiddenFiles, false, []string{})
 	if err != nil {
 		return err
 	}
@@ -198,7 +199,7 @@ func (finder *Finder) fuzzySearch(text string) {
 	line := ""
 	for _, match := range matches {
 		for i := 0; i < len(match.Str); i++ {
-			if helper.Contains(i, allMatchedIndexes[match.Str]) {
+			if slices.Contains(allMatchedIndexes[match.Str], i) {
 				line = line + "[red::b]" + string(match.Str[i]) + "[-::-]"
 			} else {
 				line = line + string(match.Str[i])
@@ -218,7 +219,7 @@ func (finder *Finder) fuzzySearch(text string) {
 
 func (finder *Finder) resetFileList() error {
 	finder.fileList.Clear()
-	fileList, err := helper.LoadDirectory(finder.context.CurrentPath, finder.context.ShowHiddenFiles, true)
+	fileList, err := helper.LoadDirectory(finder.context.CurrentPath, finder.context.ShowHiddenFiles, true, []string{})
 	if err != nil {
 		return err
 	}

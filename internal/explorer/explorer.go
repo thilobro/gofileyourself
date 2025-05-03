@@ -1,8 +1,10 @@
 package explorer
 
 import (
+	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/thilobro/gofileyourself/internal/formatter"
@@ -34,6 +36,7 @@ type FileExplorer struct {
 	currentFocusedWidget tview.Primitive
 	keyBuffer            string
 	yankedFile           string
+	markedFiles          []string
 }
 
 func (fe *FileExplorer) Root() tview.Primitive {
@@ -108,6 +111,7 @@ func NewFileExplorer(context *widget.Context) (*FileExplorer, error) {
 		currentSearchTerm:   "",
 		keyBuffer:           "",
 		yankedFile:          "",
+		markedFiles:         []string{},
 	}
 
 	if err := fe.initialize(); err != nil {
@@ -166,7 +170,7 @@ func (fe *FileExplorer) setSelectedDirectory(selectedPath string) error {
 	}
 	selectedDirectoryIndex := fe.directoryToIndexMap[selectedAbsolutePath]
 
-	newSelectedList, err := helper.LoadDirectory(selectedPath, fe.context.ShowHiddenFiles, false)
+	newSelectedList, err := helper.LoadDirectory(selectedPath, fe.context.ShowHiddenFiles, false, fe.markedFiles)
 	if err != nil {
 		return err
 	}
@@ -190,7 +194,7 @@ func (fe *FileExplorer) setParentDirectory(path string) error {
 		fe.parentList = emptyList
 	} else {
 		parentPath := filepath.Join(currentAbsolutePath, "..")
-		newParentList, err := helper.LoadDirectory(parentPath, fe.context.ShowHiddenFiles, false)
+		newParentList, err := helper.LoadDirectory(parentPath, fe.context.ShowHiddenFiles, false, fe.markedFiles)
 		if err != nil {
 			return err
 		}
@@ -209,13 +213,16 @@ func (fe *FileExplorer) setParentDirectory(path string) error {
 func (fe *FileExplorer) setCurrentDirectory(path string) error {
 	isDirEmpty, _ := helper.IsDirectoryEmpty(path)
 	if isDirEmpty {
+		if fe.context.CurrentPath == path {
+			fe.setCurrentDirectory(path + "/..")
+		}
 		return nil
 	}
 
 	// Update current directory
 	currentAbsolutePath, _ := filepath.Abs(path)
 	currentDirectoryIndex := fe.directoryToIndexMap[currentAbsolutePath]
-	newCurrentList, err := helper.LoadDirectory(currentAbsolutePath, fe.context.ShowHiddenFiles, false)
+	newCurrentList, err := helper.LoadDirectory(currentAbsolutePath, fe.context.ShowHiddenFiles, false, fe.markedFiles)
 	if err != nil {
 		return err
 	}
@@ -324,10 +331,6 @@ func (fe *FileExplorer) deleteCurrentFile(isForcedDelete bool) {
 			return
 		}
 	}
-	isDirEmpty, _ := helper.IsDirectoryEmpty(fe.context.CurrentPath)
-	if isDirEmpty {
-		fe.setCurrentDirectory(fe.context.CurrentPath + "/..")
-	}
 	fe.setCurrentDirectory(fe.context.CurrentPath)
 }
 
@@ -344,6 +347,52 @@ func (fe *FileExplorer) pasteYankedFile() {
 	if err := helper.CopyFile(fe.yankedFile, destinationPath); err != nil {
 		return
 	}
+	fe.setCurrentDirectory(fe.context.CurrentPath)
+}
+
+func (fe *FileExplorer) deleteMarkedFiles(isForcedDelete bool) {
+	filesToRemove := []string{}
+	for _, file := range fe.markedFiles {
+
+		log.Println("Deleting", file)
+		log.Println("Del from", fe.markedFiles)
+		if isForcedDelete {
+			if err := os.RemoveAll(file); err != nil {
+				log.Println("Error deleting", file, ":", err)
+				return
+			} else {
+				filesToRemove = append(filesToRemove, file)
+			}
+		} else {
+			if err := os.Remove(file); err != nil {
+				log.Println("Error deleting", file, ":", err)
+				return
+			} else {
+				filesToRemove = append(filesToRemove, file)
+			}
+		}
+	}
+	log.Println("Marked files to remove", filesToRemove)
+	for _, file := range filesToRemove {
+		fe.markedFiles = helper.DeleteItem(fe.markedFiles, file)
+	}
+	fe.setCurrentDirectory(fe.context.CurrentPath)
+}
+
+func (fe *FileExplorer) toggleMarkForCurrentFile() {
+	_, currentName := fe.currentList.GetItemText(fe.currentList.GetCurrentItem())
+	filePath := filepath.Join(fe.context.CurrentPath, currentName)
+	if slices.Contains(fe.markedFiles, filePath) {
+		fe.markedFiles = helper.DeleteItem(fe.markedFiles, filePath)
+	} else {
+		fe.markedFiles = append(fe.markedFiles, filePath)
+	}
+	fe.setCurrentDirectory(fe.context.CurrentPath)
+	fe.setCurrentLine(fe.currentList.GetCurrentItem() + 1)
+}
+
+func (fe *FileExplorer) unmarkAllFiles() {
+	fe.markedFiles = []string{}
 	fe.setCurrentDirectory(fe.context.CurrentPath)
 }
 
@@ -393,18 +442,15 @@ func (fe *FileExplorer) SetupKeyBindings() {
 			fe.keyBuffer = ""
 			fe.setCurrentLine(0)
 			return nil
-		}
-		if strings.HasSuffix(fe.keyBuffer, "dd") {
+		} else if strings.HasSuffix(fe.keyBuffer, "dd") {
 			fe.keyBuffer = ""
 			fe.deleteCurrentFile(false)
 			return nil
-		}
-		if strings.HasSuffix(fe.keyBuffer, "DD") {
+		} else if strings.HasSuffix(fe.keyBuffer, "DD") {
 			fe.keyBuffer = ""
 			fe.deleteCurrentFile(true)
 			return nil
-		}
-		if strings.HasSuffix(fe.keyBuffer, "yy") {
+		} else if strings.HasSuffix(fe.keyBuffer, "yy") {
 			fe.keyBuffer = ""
 			fe.yankCurrentFile()
 			return nil
@@ -412,8 +458,27 @@ func (fe *FileExplorer) SetupKeyBindings() {
 			fe.keyBuffer = ""
 			fe.pasteYankedFile()
 			return nil
+		} else if strings.HasSuffix(fe.keyBuffer, "mm") {
+			fe.keyBuffer = ""
+			fe.toggleMarkForCurrentFile()
+			return nil
+		} else if strings.HasSuffix(fe.keyBuffer, "mu") {
+			fe.keyBuffer = ""
+			fe.unmarkAllFiles()
+			return nil
+		} else if strings.HasSuffix(fe.keyBuffer, "md") {
+			fe.keyBuffer = ""
+			fe.deleteMarkedFiles(false)
+			return nil
+		} else if strings.HasSuffix(fe.keyBuffer, "mD") {
+			fe.keyBuffer = ""
+			fe.deleteMarkedFiles(true)
+			return nil
 		}
 		switch rune {
+		case 'M':
+			fe.toggleMarkForCurrentFile()
+			return nil
 		case 'G':
 			fe.setCurrentLine(fe.currentList.GetItemCount() - 1)
 			return nil
