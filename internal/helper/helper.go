@@ -224,3 +224,11 @@ func CreateDirectory(path string) error {
 func RenameFile(oldPath string, newPath string) error {
 	return os.Rename(oldPath, newPath)
 }
+
+func TouchFile(path string) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	return f.Close()
+}
