@@ -216,3 +216,7 @@ func DeleteItem[T comparable](slice []T, element T) []T {
 	}
 	return newSlice
 }
+
+func CreateDirectory(path string) error {
+	return os.MkdirAll(path, 0755)
+}
