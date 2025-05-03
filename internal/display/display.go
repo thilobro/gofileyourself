@@ -1,6 +1,7 @@
 package display
 
 import (
+	"log"
 	"os"
 
 	"github.com/thilobro/gofileyourself/internal/widget"
@@ -30,7 +31,9 @@ func (display *Display) setupKeyBindings() {
 		}
 		// Let the active widget handle other keys
 		if display.activeWidget != nil {
-			return display.activeWidget.GetInputCapture()(event)
+			inputHandler := display.activeWidget.GetInputCapture()
+			log.Println("inputHandler", inputHandler)
+			return inputHandler(event)
 		}
 		return event
 	})

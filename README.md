@@ -48,6 +48,11 @@ Keys:
 - `md` - Delete marked files
 - `mD` - Delete marked files / directories
 
+Commands:
+
+- `:q` - Quit
+- `:makdir <directory>` - Create directory
+
 ### Finder
 
 Keys:

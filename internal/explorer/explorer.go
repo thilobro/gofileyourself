@@ -30,6 +30,7 @@ type FileExplorer struct {
 	listFlex             *tview.Flex
 	directoryToIndexMap  map[string]int
 	footer               *tview.InputField
+	isFooterActive       bool
 	header               *tview.TextView
 	currentSearchTerm    string
 	currentSearchIndeces []int
@@ -107,6 +108,7 @@ func NewFileExplorer(context *widget.Context) (*FileExplorer, error) {
 		listFlex:            tview.NewFlex(),
 		rootFlex:            tview.NewFlex(),
 		footer:              tview.NewInputField(),
+		isFooterActive:      false,
 		header:              tview.NewTextView(),
 		currentSearchTerm:   "",
 		keyBuffer:           "",
@@ -157,6 +159,10 @@ func (fe *FileExplorer) Draw() {
 }
 
 func (fe *FileExplorer) GetInputCapture() func(*tcell.EventKey) *tcell.EventKey {
+	if fe.isFooterActive && fe.footer != nil {
+		log.Println("Getting input capture for footer")
+		return fe.footer.GetInputCapture()
+	}
 	return fe.currentList.GetInputCapture()
 }
 
@@ -286,16 +292,27 @@ func (fe *FileExplorer) runFooterCommand(inputText string) {
 		}
 	case ':':
 		command := inputText[1:]
-		switch command {
+		parts := strings.Split(command, " ")
+		switch parts[0] {
 		case "q":
 			fe.context.App.Stop()
+		case "mkdir":
+			if len(parts) > 1 {
+				helper.CreateDirectory(parts[1])
+				fe.setCurrentDirectory(fe.context.CurrentPath)
+			}
 		}
 	}
 	fe.currentFocusedWidget = fe.currentList
 }
 
 func (fe *FileExplorer) handleFooterInput(prompt string) {
+	fe.isFooterActive = true
+	log.Println("Footer started")
 	fe.footer = tview.NewInputField().SetText(prompt)
+	fe.footer.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		return event
+	})
 	fe.footer.SetDoneFunc(
 		func(key tcell.Key) {
 			if key == tcell.KeyEnter {
@@ -304,6 +321,8 @@ func (fe *FileExplorer) handleFooterInput(prompt string) {
 				fe.currentFocusedWidget = fe.currentList
 			}
 			fe.Draw()
+			fe.isFooterActive = false
+			log.Println("Footer done")
 		},
 	)
 	fe.currentFocusedWidget = fe.footer
