@@ -55,6 +55,7 @@ Commands:
 - `:q` - Quit
 - `:mkdir <directory>` - Create directory
 - `:rename <new name>` - Rename file
+- `:touch <file>` - Create file
 
 ### Finder
 

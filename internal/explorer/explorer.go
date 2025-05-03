@@ -1,7 +1,6 @@
 package explorer
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"slices"
@@ -162,7 +161,6 @@ func (fe *FileExplorer) Draw() {
 
 func (fe *FileExplorer) GetInputCapture() func(*tcell.EventKey) *tcell.EventKey {
 	if fe.isFooterActive && fe.footer != nil {
-		log.Println("Getting input capture for footer")
 		return fe.footer.GetInputCapture()
 	}
 	return fe.currentList.GetInputCapture()
@@ -310,6 +308,11 @@ func (fe *FileExplorer) runFooterCommand(inputText string) {
 				helper.RenameFile(currentPath, parts[1])
 				fe.setCurrentDirectory(fe.context.CurrentPath)
 			}
+		case "touch":
+			if len(parts) > 1 {
+				helper.TouchFile(parts[1])
+				fe.setCurrentDirectory(fe.context.CurrentPath)
+			}
 		}
 	}
 	fe.currentFocusedWidget = fe.currentList
@@ -317,7 +320,6 @@ func (fe *FileExplorer) runFooterCommand(inputText string) {
 
 func (fe *FileExplorer) handleFooterInput(prompt string) {
 	fe.isFooterActive = true
-	log.Println("Footer started")
 	fe.footer = tview.NewInputField().SetText(prompt)
 	fe.footer.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		return event
@@ -331,7 +333,6 @@ func (fe *FileExplorer) handleFooterInput(prompt string) {
 			}
 			fe.Draw()
 			fe.isFooterActive = false
-			log.Println("Footer done")
 		},
 	)
 	fe.currentFocusedWidget = fe.footer
@@ -381,26 +382,20 @@ func (fe *FileExplorer) pasteYankedFile() {
 func (fe *FileExplorer) deleteMarkedFiles(isForcedDelete bool) {
 	filesToRemove := []string{}
 	for _, file := range fe.markedFiles {
-
-		log.Println("Deleting", file)
-		log.Println("Del from", fe.markedFiles)
 		if isForcedDelete {
 			if err := os.RemoveAll(file); err != nil {
-				log.Println("Error deleting", file, ":", err)
 				return
 			} else {
 				filesToRemove = append(filesToRemove, file)
 			}
 		} else {
 			if err := os.Remove(file); err != nil {
-				log.Println("Error deleting", file, ":", err)
 				return
 			} else {
 				filesToRemove = append(filesToRemove, file)
 			}
 		}
 	}
-	log.Println("Marked files to remove", filesToRemove)
 	for _, file := range filesToRemove {
 		fe.markedFiles = helper.DeleteItem(fe.markedFiles, file)
 	}
