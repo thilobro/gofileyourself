@@ -301,6 +301,13 @@ func (fe *FileExplorer) runFooterCommand(inputText string) {
 				helper.CreateDirectory(parts[1])
 				fe.setCurrentDirectory(fe.context.CurrentPath)
 			}
+		case "rename":
+			if len(parts) > 1 {
+				_, currentName := fe.currentList.GetItemText(fe.currentList.GetCurrentItem())
+				currentPath := filepath.Join(fe.context.CurrentPath, currentName)
+				helper.RenameFile(currentPath, parts[1])
+				fe.setCurrentDirectory(fe.context.CurrentPath)
+			}
 		}
 	}
 	fe.currentFocusedWidget = fe.currentList

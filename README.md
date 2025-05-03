@@ -52,6 +52,7 @@ Commands:
 
 - `:q` - Quit
 - `:makdir <directory>` - Create directory
+- `:rename <new name>` - Rename file
 
 ### Finder
 

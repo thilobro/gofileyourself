@@ -220,3 +220,7 @@ func DeleteItem[T comparable](slice []T, element T) []T {
 func CreateDirectory(path string) error {
 	return os.MkdirAll(path, 0755)
 }
+
+func RenameFile(oldPath string, newPath string) error {
+	return os.Rename(oldPath, newPath)
+}
