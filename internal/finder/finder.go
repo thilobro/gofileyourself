@@ -24,21 +24,28 @@ type Finder struct {
 	selectedList         tview.Primitive
 	currentFocusedWidget tview.Primitive
 	searchTerm           string
+	fuzzySearchQuit      chan bool
+	listUpdateChan       chan *tview.List // Channel for list updates
 }
 
 func NewFinder(context *widget.Context) (*Finder, error) {
 	finder := &Finder{
-		context:      context,
-		rootFlex:     tview.NewFlex(),
-		footer:       tview.NewInputField(),
-		fileList:     tview.NewList(),
-		selectedList: tview.NewList().ShowSecondaryText(false),
-		searchTerm:   "",
+		context:         context,
+		rootFlex:        tview.NewFlex(),
+		footer:          tview.NewInputField(),
+		fileList:        tview.NewList(),
+		selectedList:    tview.NewList().ShowSecondaryText(false),
+		searchTerm:      "",
+		fuzzySearchQuit: make(chan bool),
+		listUpdateChan:  make(chan *tview.List, 1), // Buffered channel
 	}
 	finder.resetFileList()
 	finder.searchedList = finder.fileList
 	finder.SetupKeyBindings()
 	finder.currentFocusedWidget = finder.searchedList
+
+	// Start list update handler
+	go finder.handleListUpdates()
 
 	err := finder.searchInDirectory()
 	if err != nil {
@@ -47,6 +54,15 @@ func NewFinder(context *widget.Context) (*Finder, error) {
 	finder.setCurrentLine(0)
 
 	return finder, nil
+}
+
+func (finder *Finder) handleListUpdates() {
+	for newList := range finder.listUpdateChan {
+		finder.searchedList = newList
+		finder.context.App.QueueUpdateDraw(func() {
+			finder.Draw()
+		})
+	}
 }
 
 func (finder *Finder) setCurrentLine(lineIndex int) error {
@@ -102,7 +118,7 @@ func (finder *Finder) SetupKeyBindings() {
 			if idx := helper.FindExactItem(finder.searchedList, currentName); idx >= 0 {
 				finder.setCurrentLine(idx)
 			}
-			finder.fuzzySearch(finder.searchTerm)
+			go finder.manageFuzzySearch(finder.searchTerm)
 			return nil
 		case tcell.KeyUp:
 			finder.setCurrentLine(finder.searchedList.GetCurrentItem() - 1)
@@ -144,7 +160,7 @@ func (finder *Finder) handleFooterInput() {
 		currentText := finder.footer.GetText()
 		if event.Key() == tcell.KeyBackspace2 {
 			currentTextLen := len(currentText)
-			if currentTextLen == 1 {
+			if currentTextLen <= 1 {
 				return nil
 			}
 			currentText = currentText[:currentTextLen-1]
@@ -158,17 +174,32 @@ func (finder *Finder) handleFooterInput() {
 	finder.footer.SetChangedFunc(
 		func(text string) {
 			defer finder.Draw()
-			finder.resetFileList()
 			if text == "/" {
 				finder.searchedList = finder.fileList
 				return
 			}
 			currentInput := strings.TrimPrefix(text, "/")
-			finder.fuzzySearch(currentInput)
+			go finder.manageFuzzySearch(currentInput)
 		},
 	)
 	finder.currentFocusedWidget = finder.footer
 	finder.Draw()
+}
+
+func (finder *Finder) manageFuzzySearch(text string) {
+	// Signal any existing search to stop
+	select {
+	case finder.fuzzySearchQuit <- true:
+	default:
+	}
+
+	// Check if we should stop before starting
+	select {
+	case <-finder.fuzzySearchQuit:
+		return
+	default:
+		finder.fuzzySearch(text)
+	}
 }
 
 func (finder *Finder) fuzzySearch(text string) {
@@ -209,8 +240,8 @@ func (finder *Finder) fuzzySearch(text string) {
 		matchedStrs = newMatchedStrs
 	}
 
-	// Clear and rebuild the list with final matches
-	finder.searchedList.Clear()
+	// Create new list with matches
+	newList := tview.NewList().ShowSecondaryText(false)
 	line := ""
 	for _, match := range matches {
 		for i := 0; i < len(match.Str); i++ {
@@ -220,19 +251,21 @@ func (finder *Finder) fuzzySearch(text string) {
 				line = line + string(match.Str[i])
 			}
 		}
-		finder.searchedList.AddItem(line, match.Str, 0, nil)
+		newList.AddItem(line, match.Str, 0, nil)
 		line = ""
 	}
 
 	if len(matches) > 0 {
-		finder.setCurrentLine(0)
-	}
-	itemCount := finder.searchedList.GetItemCount()
-	if itemCount == 0 {
-		finder.selectedList = nil
+		newList.SetCurrentItem(0)
 	}
 
-	finder.Draw()
+	// Send the new list through the channel
+	select {
+	case finder.listUpdateChan <- newList:
+	default:
+		// If channel is full, skip this update
+	}
+
 	finder.searchTerm = text
 }
 
@@ -285,7 +318,7 @@ func (finder *Finder) applyTheme() {
 	finder.rootFlex.SetBackgroundColor(explorerTheme.Bg0)
 
 	// Style the lists
-	finder.fileList.
+	finder.searchedList.
 		SetMainTextColor(explorerTheme.Fg1).
 		SetSelectedTextColor(explorerTheme.Black).
 		SetSelectedBackgroundColor(explorerTheme.Aqua).
