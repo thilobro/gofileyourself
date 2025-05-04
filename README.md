@@ -28,6 +28,7 @@ gofileyourself is a terminal-based file manager with vim-like keybindings:
 Keys:
 
 - `Ctrl-H` - Toggle hidden files
+- `Ctrl-C` - Quit
 
 ### Explorer
 

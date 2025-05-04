@@ -1,7 +1,6 @@
 package display
 
 import (
-	"log"
 	"os"
 
 	"github.com/thilobro/gofileyourself/internal/widget"
@@ -22,6 +21,8 @@ type Display struct {
 func (display *Display) setupKeyBindings() {
 	display.context.App.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
+		case tcell.KeyCtrlC:
+			display.context.App.Stop()
 		case tcell.KeyCtrlF:
 			display.setMode(widget.Find)
 			return nil // Consume the event
@@ -32,7 +33,6 @@ func (display *Display) setupKeyBindings() {
 		// Let the active widget handle other keys
 		if display.activeWidget != nil {
 			inputHandler := display.activeWidget.GetInputCapture()
-			log.Println("inputHandler", inputHandler)
 			return inputHandler(event)
 		}
 		return event

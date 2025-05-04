@@ -111,8 +111,8 @@ func (finder *Finder) SetupKeyBindings() {
 			finder.setCurrentLine(finder.searchedList.GetCurrentItem() + 1)
 			return nil
 		case tcell.KeyEnter:
-			currentItem := finder.fileList.GetCurrentItem()
-			_, fileName := finder.fileList.GetItemText(currentItem)
+			currentItem := finder.searchedList.GetCurrentItem()
+			_, fileName := finder.searchedList.GetItemText(currentItem)
 			filePath := filepath.Join(finder.context.CurrentPath, fileName)
 
 			fileInfo, err := os.Stat(filePath)
@@ -133,12 +133,27 @@ func (finder *Finder) SetupKeyBindings() {
 			finder.handleFooterInput()
 		}
 		finder.currentFocusedWidget = finder.footer
-		return event
+		finder.footer.GetInputCapture()(event)
+		return nil
 	})
 }
 
 func (finder *Finder) handleFooterInput() {
 	finder.footer = tview.NewInputField().SetText("/")
+	finder.footer.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		currentText := finder.footer.GetText()
+		if event.Key() == tcell.KeyBackspace2 {
+			currentTextLen := len(currentText)
+			if currentTextLen == 1 {
+				return nil
+			}
+			currentText = currentText[:currentTextLen-1]
+		} else {
+			currentText = currentText + string(event.Rune())
+		}
+		finder.footer.SetText(currentText)
+		return nil
+	})
 	finder.searchedList = finder.fileList
 	finder.footer.SetChangedFunc(
 		func(text string) {
@@ -211,6 +226,10 @@ func (finder *Finder) fuzzySearch(text string) {
 
 	if len(matches) > 0 {
 		finder.setCurrentLine(0)
+	}
+	itemCount := finder.searchedList.GetItemCount()
+	if itemCount == 0 {
+		finder.selectedList = nil
 	}
 
 	finder.Draw()
