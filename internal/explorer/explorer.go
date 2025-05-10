@@ -1,6 +1,8 @@
 package explorer
 
 import (
+	"bufio"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -308,6 +310,8 @@ func (fe *FileExplorer) runFooterCommand(inputText string) {
 				helper.RenameFile(currentPath, parts[1])
 				fe.setCurrentDirectory(fe.context.CurrentPath)
 			}
+		case "mrename":
+			fe.renameMarkedFiles()
 		case "touch":
 			if len(parts) > 1 {
 				helper.TouchFile(parts[1])
@@ -376,6 +380,45 @@ func (fe *FileExplorer) pasteYankedFile() {
 	if err := helper.CopyFile(fe.yankedFile, destinationPath); err != nil {
 		return
 	}
+	fe.setCurrentDirectory(fe.context.CurrentPath)
+}
+
+func (fe *FileExplorer) renameMarkedFiles() {
+	tempFile, err := os.CreateTemp("", "gofileyourself_rm")
+	if err != nil {
+		return
+	}
+	defer tempFile.Close()
+	defer os.Remove(tempFile.Name())
+
+	if len(fe.markedFiles) == 0 {
+		return
+	}
+	for _, file := range fe.markedFiles {
+		fmt.Fprintln(tempFile, filepath.Base(file))
+	}
+	helper.OpenInNvim(tempFile.Name(), fe.context.App)
+
+	file, err := os.Open(tempFile.Name())
+	if err != nil {
+		return
+	}
+	fileReader := bufio.NewReader(file)
+	lineIdx := 0
+	for {
+		line, _, err := fileReader.ReadLine()
+		if len(line) > 0 {
+			if lineIdx <= len(fe.markedFiles) {
+				path := fe.markedFiles[lineIdx]
+				helper.RenameFile(path, string(filepath.Join(filepath.Dir(path), string(line))))
+			}
+			lineIdx++
+		}
+		if err != nil {
+			break
+		}
+	}
+	fe.markedFiles = []string{}
 	fe.setCurrentDirectory(fe.context.CurrentPath)
 }
 
