@@ -299,10 +299,10 @@ func (finder *Finder) Draw() {
 		listFlex.AddItem(finder.selectedList, 0, 1, true)
 	}
 	finder.rootFlex.SetDirection(tview.FlexRow)
-	finder.rootFlex.AddItem(listFlex, 0, 1, true)
 	if finder.footer != nil {
-		finder.rootFlex.AddItem(finder.footer, 1, 0, false)
+		finder.rootFlex.AddItem(finder.footer, 3, 0, false)
 	}
+	finder.rootFlex.AddItem(listFlex, 0, 1, true)
 	finder.context.App.SetFocus(finder.currentFocusedWidget)
 	finder.applyTheme()
 }
@@ -329,7 +329,8 @@ func (finder *Finder) applyTheme() {
 		finder.footer.
 			SetFieldBackgroundColor(explorerTheme.Bg1).
 			SetFieldTextColor(explorerTheme.Fg0).
-			SetBackgroundColor(explorerTheme.Bg0)
+			SetBackgroundColor(explorerTheme.Bg0).
+			SetBorder(true).SetTitle("Find").Blur()
 	}
 }
 
