@@ -90,13 +90,6 @@ func (fe *FileExplorer) applyTheme() {
 			SetFieldTextColor(explorerTheme.Fg0).
 			SetBackgroundColor(explorerTheme.Bg0)
 	}
-
-	// Style the header
-	if fe.header != nil {
-		fe.header.
-			SetBackgroundColor(explorerTheme.Blue)
-		fe.header.SetTextColor(explorerTheme.Bg0)
-	}
 }
 
 // NewFileExplorer creates and initializes a new FileExplorer
@@ -150,7 +143,7 @@ func (fe *FileExplorer) Draw() {
 	fe.rootFlex.Clear()
 	fe.rootFlex.SetDirection(tview.FlexRow)
 	if fe.header != nil {
-		fe.rootFlex.AddItem(fe.header, 1, 0, false)
+		fe.rootFlex.AddItem(fe.header, 3, 0, false)
 	}
 	fe.rootFlex.AddItem(fe.listFlex, 0, 1, true)
 	if fe.footer != nil {
@@ -261,6 +254,7 @@ func (fe *FileExplorer) setCurrentDirectory(path string) error {
 }
 
 func (fe *FileExplorer) setHeader(text string) {
+	fe.header.SetBorder(true).SetTitle("Explore").Blur()
 	fe.header.SetText(text)
 }
 
