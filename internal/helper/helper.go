@@ -9,6 +9,7 @@ import (
 	"slices"
 	"sort"
 	"strconv"
+	"unicode/utf8"
 
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/lexers"
@@ -134,49 +135,72 @@ func LoadDirectory(path string, showHiddenFiles bool, recursive bool, markedItem
 	return list, nil
 }
 
-// LoadFilePreview is a helper function that creates a text view for file contents
-func LoadFilePreview(path string) (*tview.TextView, error) {
-	content, err := os.ReadFile(path)
+func IsTextFile(path string) bool {
+	file, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return false
+	}
+	defer file.Close()
+
+	// Read first few KB
+	buffer := make([]byte, 4096)
+	n, err := file.Read(buffer)
+	if err != nil && err != io.EOF {
+		return false
 	}
 
+	// Check for null bytes (common in binary files)
+	if bytes.IndexByte(buffer[:n], 0) != -1 {
+		return false
+	}
+
+	// Verify it's valid UTF-8
+	return utf8.Valid(buffer[:n])
+}
+
+// LoadFilePreview is a helper function that creates a text view for file contents
+func LoadFilePreview(path string) (*tview.TextView, error) {
 	// Create text view
 	textView := tview.NewTextView().
 		SetDynamicColors(true).
 		SetRegions(true).
 		SetWordWrap(true)
 
-	// Detect language based on file extension
-	lexer := lexers.Match(path)
-	if lexer == nil {
-		lexer = lexers.Fallback
-	}
+	if IsTextFile(path) {
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
 
-	// Use gruvbox style
-	style := styles.Get("gruvbox")
-	if style == nil {
-		style = styles.Fallback
-	}
+		lexer := lexers.Match(path)
+		if lexer == nil {
+			lexer = lexers.Fallback
+		}
 
-	formatter := formatters.Get("tview")
-	if formatter == nil {
-		formatter = formatters.Fallback
-	}
+		style := styles.Get("gruvbox")
+		if style == nil {
+			style = styles.Fallback
+		}
 
-	iterator, err := lexer.Tokenise(nil, string(content))
-	if err != nil {
-		return nil, err
-	}
+		formatter := formatters.Get("tview")
+		if formatter == nil {
+			formatter = formatters.Fallback
+		}
 
-	// Create buffer to store formatted output
-	var buf bytes.Buffer
-	err = formatter.Format(&buf, style, iterator)
-	if err != nil {
-		return nil, err
-	}
+		iterator, err := lexer.Tokenise(nil, string(content))
+		if err != nil {
+			return nil, err
+		}
 
-	textView.SetText(buf.String())
+		var buf bytes.Buffer
+		err = formatter.Format(&buf, style, iterator)
+		if err != nil {
+			return nil, err
+		}
+		textView.SetText(buf.String())
+		return textView, nil
+	}
+	textView.SetText("[gray::]No preview...[-::]")
 	return textView, nil
 }
 
