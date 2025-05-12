@@ -13,6 +13,7 @@ import (
 	"github.com/thilobro/gofileyourself/internal/theme"
 	"github.com/thilobro/gofileyourself/internal/widget"
 
+	gostring "github.com/boyter/go-string"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -33,6 +34,7 @@ type FileExplorer struct {
 	footer               *tview.InputField
 	isFooterActive       bool
 	header               *tview.TextView
+	searchInput          string
 	currentSearchTerm    string
 	currentSearchIndeces []int
 	currentFocusedWidget tview.Primitive
@@ -92,6 +94,14 @@ func (fe *FileExplorer) applyTheme() {
 	}
 }
 
+func (fe *FileExplorer) highlightSearchInput() {
+	for i := 0; i < fe.currentList.GetItemCount(); i++ {
+		_, text := fe.currentList.GetItemText(i)
+		indeces := gostring.IndexAll(text, fe.searchInput, -1)
+		fe.currentList.SetItemText(i, gostring.HighlightString(text, indeces, "[red::b]", "[-::-]"), text)
+	}
+}
+
 // NewFileExplorer creates and initializes a new FileExplorer
 func NewFileExplorer(context *widget.Context) (*FileExplorer, error) {
 	fe := &FileExplorer{
@@ -105,6 +115,7 @@ func NewFileExplorer(context *widget.Context) (*FileExplorer, error) {
 		footer:              tview.NewInputField(),
 		isFooterActive:      false,
 		header:              tview.NewTextView(),
+		searchInput:         "",
 		currentSearchTerm:   "",
 		keyBuffer:           "",
 		yankedFile:          "",
@@ -152,6 +163,7 @@ func (fe *FileExplorer) Draw() {
 	fe.context.App.SetRoot(fe.rootFlex, true)
 	fe.context.App.SetFocus(fe.currentFocusedWidget)
 	fe.applyTheme()
+	fe.highlightSearchInput()
 }
 
 func (fe *FileExplorer) GetInputCapture() func(*tcell.EventKey) *tcell.EventKey {
@@ -322,6 +334,22 @@ func (fe *FileExplorer) handleFooterInput(prompt string) {
 	fe.footer.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		return event
 	})
+	fe.footer.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		currentText := fe.footer.GetText()
+		if event.Key() == tcell.KeyBackspace2 {
+			currentTextLen := len(currentText)
+			if currentTextLen <= 1 {
+				return nil
+			}
+			currentText = currentText[:currentTextLen-1]
+		} else if event.Key() == tcell.KeyEnter {
+			return event
+		} else {
+			currentText = currentText + string(event.Rune())
+		}
+		fe.footer.SetText(currentText)
+		return nil
+	})
 	fe.footer.SetDoneFunc(
 		func(key tcell.Key) {
 			if key == tcell.KeyEnter {
@@ -331,6 +359,12 @@ func (fe *FileExplorer) handleFooterInput(prompt string) {
 			}
 			fe.Draw()
 			fe.isFooterActive = false
+		},
+	)
+	fe.footer.SetChangedFunc(
+		func(text string) {
+			defer fe.Draw()
+			fe.searchInput = strings.TrimPrefix(text, "/")
 		},
 	)
 	fe.currentFocusedWidget = fe.footer
