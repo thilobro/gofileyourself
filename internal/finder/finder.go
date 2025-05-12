@@ -330,7 +330,7 @@ func (finder *Finder) applyTheme() {
 			SetFieldBackgroundColor(explorerTheme.Bg1).
 			SetFieldTextColor(explorerTheme.Fg0).
 			SetBackgroundColor(explorerTheme.Bg0).
-			SetBorder(true).SetTitle("Find").Blur()
+			SetBorder(true).Blur()
 	}
 }
 
