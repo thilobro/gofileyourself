@@ -9,6 +9,7 @@ import (
 	"slices"
 	"sort"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/alecthomas/chroma/formatters"
@@ -255,4 +256,85 @@ func TouchFile(path string) error {
 		return err
 	}
 	return f.Close()
+}
+
+func GetLineWithKey(path string, key string) (string, error) {
+	// Check if file exists
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return "", nil // File doesn't exist, return empty string
+	}
+
+	// Read file contents
+	fileBytes, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+
+	// Split into lines and search for key
+	lines := strings.Split(string(fileBytes), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, key) {
+			return line, nil
+		}
+	}
+
+	// Key not found
+	return "", nil
+}
+
+func AppendOrReplaceLineInFile(path string, content string) error {
+	// Create directory if it doesn't exist
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	// Ensure content ends with newline
+	if !strings.HasSuffix(content, "\n") {
+		content += "\n"
+	}
+
+	// Check if file exists
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		// File doesn't exist, create and write content
+		return os.WriteFile(path, []byte(content), 0644)
+	}
+
+	// File exists, read its contents
+	fileBytes, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	// Get first letter of content
+	if len(content) == 0 {
+		return nil // Nothing to add
+	}
+	firstLetter := content[0]
+
+	// Split file into lines
+	lines := strings.Split(string(fileBytes), "\n")
+	replaced := false
+
+	// Check each line for matching first letter
+	for i, line := range lines {
+		if len(line) > 0 && line[0] == firstLetter {
+			lines[i] = strings.TrimSuffix(content, "\n")
+			replaced = true
+			break
+		}
+	}
+
+	// If no line was replaced, append the content
+	if !replaced {
+		// Remove empty last line if it exists
+		if len(lines) > 0 && lines[len(lines)-1] == "" {
+			lines = lines[:len(lines)-1]
+		}
+		lines = append(lines, strings.TrimSuffix(content, "\n"))
+	}
+
+	// Write back to file
+	newContent := strings.Join(lines, "\n") + "\n"
+	return os.WriteFile(path, []byte(newContent), 0644)
 }
