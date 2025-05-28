@@ -50,6 +50,8 @@ Keys:
 - `mD` - Delete marked files / directories
 - `my` - Yank marked files
 - `mp` - Paste marked files
+- `A<key>` - Set anchor for key
+- `a<key>` - Jump to anchor for key
 
 Commands:
 

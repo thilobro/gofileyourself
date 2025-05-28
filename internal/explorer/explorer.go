@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -502,6 +503,29 @@ func (fe *FileExplorer) pasteMarkedFiles() {
 	fe.setCurrentDirectory(fe.context.CurrentPath)
 }
 
+func (fe *FileExplorer) setAnchor(key string) {
+	_, currentName := fe.currentList.GetItemText(fe.currentList.GetCurrentItem())
+	anchor := key + " > " + fe.context.CurrentPath + "/" + currentName
+	homeDir, _ := os.UserHomeDir()
+	anchorFilePath := homeDir + "/.gofileyourself_anchors"
+	helper.AppendOrReplaceLineInFile(anchorFilePath, anchor)
+}
+
+func (fe *FileExplorer) jumpToAnchor(key string) {
+	homeDir, _ := os.UserHomeDir()
+	anchor := homeDir + "/.gofileyourself_anchors"
+	anchor, err := helper.GetLineWithKey(anchor, key)
+	if err != nil {
+		return
+	}
+	anchorPrefix := key + " > "
+	anchorPath := strings.TrimPrefix(anchor, anchorPrefix)
+	anchorBase := filepath.Base(anchorPath)
+	anchorDir := filepath.Dir(anchorPath)
+	fe.setCurrentDirectory(anchorDir)
+	fe.setCurrentLine(helper.FindExactItem(fe.currentList, anchorBase))
+}
+
 // setupKeyBindings configures keyboard input handling
 func (fe *FileExplorer) SetupKeyBindings() {
 	fe.currentList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -587,6 +611,16 @@ func (fe *FileExplorer) SetupKeyBindings() {
 		} else if strings.HasSuffix(fe.keyBuffer, "mp") {
 			fe.keyBuffer = ""
 			fe.pasteMarkedFiles()
+			return nil
+		} else if match := regexp.MustCompile(`A([a-zA-Z0-9]+)$`).FindStringSubmatch(fe.keyBuffer); match != nil {
+			key := match[1]
+			fe.keyBuffer = ""
+			fe.setAnchor(key)
+			return nil
+		} else if match := regexp.MustCompile(`a([a-zA-Z0-9]+)$`).FindStringSubmatch(fe.keyBuffer); match != nil {
+			key := match[1]
+			fe.keyBuffer = ""
+			fe.jumpToAnchor(key)
 			return nil
 		}
 		switch rune {
