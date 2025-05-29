@@ -36,6 +36,7 @@ Keys:
 
 - `j/k` - Move cursor down/up
 - `h/l` - Go to parent directory / Enter directory or open file
+- `Ctrl-D/U` - Move cursor down/up (half list)
 - `/` - Search in current directory
 - `q` - Quit
 - `S` - Quit and jump to last directory

@@ -19,6 +19,10 @@ import (
 	"github.com/rivo/tview"
 )
 
+const (
+	MAX_SCROLL_AMOUNT = 20
+)
+
 func init() {
 	formatter.RegisterCustomFormatter()
 }
@@ -273,8 +277,11 @@ func (fe *FileExplorer) setHeader(text string) {
 
 // setCurrentLine updates the current line selection
 func (fe *FileExplorer) setCurrentLine(lineIndex int) error {
-	if lineIndex < 0 || lineIndex >= fe.currentList.GetItemCount() {
-		return nil
+	if lineIndex < 0 {
+		lineIndex = 0
+	}
+	if lineIndex >= fe.currentList.GetItemCount() {
+		lineIndex = fe.currentList.GetItemCount() - 1
 	}
 	fe.currentList.SetCurrentItem(lineIndex)
 	currentAbsolutePath, _ := filepath.Abs(fe.context.CurrentPath)
@@ -561,6 +568,20 @@ func (fe *FileExplorer) SetupKeyBindings() {
 					fe.directoryToIndexMap[absoluteSelectedPath] = idx
 				}
 			}
+			return nil
+		case tcell.KeyCtrlD: // scroll 10 down
+			scrollAmount := fe.currentList.GetItemCount() / 2
+			if scrollAmount > MAX_SCROLL_AMOUNT {
+				scrollAmount = MAX_SCROLL_AMOUNT
+			}
+			fe.setCurrentLine(fe.currentList.GetCurrentItem() + scrollAmount)
+			return nil
+		case tcell.KeyCtrlU: // scroll 10 up
+			scrollAmount := fe.currentList.GetItemCount() / 2
+			if scrollAmount > MAX_SCROLL_AMOUNT {
+				scrollAmount = MAX_SCROLL_AMOUNT
+			}
+			fe.setCurrentLine(fe.currentList.GetCurrentItem() - scrollAmount)
 			return nil
 		}
 		rune := event.Rune()
