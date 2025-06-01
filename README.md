@@ -25,6 +25,12 @@ gofileyourself is a terminal-based file manager with vim-like keybindings:
 
 ### General
 
+Flags:
+
+- `-h` - Show help
+- `--debug` - Print debug log to debug.log
+- `--choosefiles=<file>` - Use as a file chooser that writes selected files to the given file
+
 Keys:
 
 - `Ctrl-H` - Toggle hidden files

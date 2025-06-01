@@ -141,7 +141,7 @@ func (finder *Finder) SetupKeyBindings() {
 				finder.context.OnWidgetResult(widget.Find, filePath)
 				return nil
 			}
-			helper.OpenInNvim(filePath, finder.context.App)
+			helper.OpenInNvim(filePath, finder.context.ChooseFilePath, finder.context.App)
 			return nil
 		}
 

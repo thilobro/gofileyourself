@@ -14,7 +14,15 @@ import (
 
 func main() {
 	debug := flag.Bool("debug", false, "Enable debug logging")
+	cfp := flag.String("choosefiles", "", "Use as a file chooser")
+
 	flag.Parse()
+	var chooseFilePath *string
+	if *cfp != "" {
+		chooseFilePath = cfp
+	} else {
+		chooseFilePath = nil
+	}
 
 	if *debug {
 		logFile, err := os.OpenFile("debug.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
@@ -35,8 +43,9 @@ func main() {
 		widget.Explorer: &explorer.Factory{},
 		widget.Find:     &finder.Factory{},
 	}
+	log.Println("Choose file path: ", chooseFilePath)
 
-	display, err := display.NewDisplay(factories)
+	display, err := display.NewDisplay(factories, chooseFilePath)
 	if err != nil {
 		panic(err)
 	}

@@ -62,7 +62,7 @@ func (display *Display) setActiveWidgetBasedOnMode(mode widget.Mode) {
 	display.context.App.SetRoot(display.activeWidget.Root(), true)
 }
 
-func NewDisplay(factories map[widget.Mode]widget.Factory) (*Display, error) {
+func NewDisplay(factories map[widget.Mode]widget.Factory, chooseFilePath *string) (*Display, error) {
 	app := tview.NewApplication()
 	currentPath, err := os.Getwd()
 	if err != nil {
@@ -76,6 +76,7 @@ func NewDisplay(factories map[widget.Mode]widget.Factory) (*Display, error) {
 		CurrentPath:     currentPath,
 		ShowHiddenFiles: false,
 		OnWidgetResult:  display.onWidgetResult,
+		ChooseFilePath:  chooseFilePath,
 	}
 	explorerWidget, err := explorerFactory.New(context)
 	if err != nil {

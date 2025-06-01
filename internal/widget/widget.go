@@ -17,6 +17,7 @@ type Context struct {
 	CurrentPath     string
 	ShowHiddenFiles bool
 	OnWidgetResult  func(mode Mode, result string)
+	ChooseFilePath  *string
 }
 
 type WidgetInterface interface {
