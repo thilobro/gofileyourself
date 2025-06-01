@@ -433,7 +433,7 @@ func (fe *FileExplorer) renameMarkedFiles() {
 	for _, file := range fe.markedFiles {
 		fmt.Fprintln(tempFile, filepath.Base(file))
 	}
-	helper.OpenInNvim(tempFile.Name(), fe.context.App)
+	helper.OpenInNvim(tempFile.Name(), fe.context.ChooseFilePath, fe.context.App)
 
 	file, err := os.Open(tempFile.Name())
 	if err != nil {
@@ -676,7 +676,7 @@ func (fe *FileExplorer) SetupKeyBindings() {
 					return event
 				}
 			} else {
-				helper.OpenInNvim(filePath, fe.context.App)
+				helper.OpenInNvim(filePath, fe.context.ChooseFilePath, fe.context.App)
 				return nil
 			}
 			return nil

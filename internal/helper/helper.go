@@ -206,14 +206,23 @@ func LoadFilePreview(path string) (*tview.TextView, error) {
 }
 
 // OpenInNvim is a helper function that opens a file in neovim
-func OpenInNvim(path string, app *tview.Application) error {
-	app.Suspend(func() {
-		cmd := exec.Command("nvim", path)
+func OpenInNvim(path string, selectedFilePath *string, app *tview.Application) error {
+	if selectedFilePath == nil {
+		app.Suspend(func() {
+			cmd := exec.Command("nvim", path)
+			cmd.Stdin = os.Stdin
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			cmd.Run()
+		})
+	} else {
+		cmd := exec.Command("sh", "-c", "echo \""+path+"\" > "+*selectedFilePath)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Run()
-	})
+		app.Stop()
+	}
 	return nil
 }
 
