@@ -30,6 +30,7 @@ Flags:
 - `-h` - Show help
 - `--debug` - Print debug log to debug.log
 - `--choosefiles=<file>` - Use as a file chooser that writes selected files to the given file
+- `--selectfile=<file>` - Select the given file path when opening the file manager
 
 Keys:
 

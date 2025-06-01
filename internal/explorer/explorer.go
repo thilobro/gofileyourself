@@ -138,7 +138,14 @@ func NewFileExplorer(context *widget.Context) (*FileExplorer, error) {
 // initialize sets up the initial state of the FileExplorer
 func (fe *FileExplorer) initialize() error {
 	fe.SetupKeyBindings()
-	fe.setCurrentDirectory(fe.context.CurrentPath)
+	if fe.context.SelectedFilePath != nil {
+		fe.context.CurrentPath = filepath.Dir(*fe.context.SelectedFilePath)
+		fe.setCurrentDirectory(fe.context.CurrentPath)
+		selectedFileIndex := helper.FindExactItem(fe.currentList, filepath.Base(*fe.context.SelectedFilePath))
+		fe.currentList.SetCurrentItem(selectedFileIndex)
+	} else {
+		fe.setCurrentDirectory(fe.context.CurrentPath)
+	}
 	fe.currentFocusedWidget = fe.currentList
 	fe.Draw()
 	return nil

@@ -15,6 +15,7 @@ import (
 func main() {
 	debug := flag.Bool("debug", false, "Enable debug logging")
 	cfp := flag.String("choosefiles", "", "Use as a file chooser")
+	sf := flag.String("selectfile", "", "The file that was selected")
 
 	flag.Parse()
 	var chooseFilePath *string
@@ -22,6 +23,12 @@ func main() {
 		chooseFilePath = cfp
 	} else {
 		chooseFilePath = nil
+	}
+	var selectedFilePath *string
+	if *sf != "" {
+		selectedFilePath = sf
+	} else {
+		selectedFilePath = nil
 	}
 
 	if *debug {
@@ -43,9 +50,9 @@ func main() {
 		widget.Explorer: &explorer.Factory{},
 		widget.Find:     &finder.Factory{},
 	}
-	log.Println("Choose file path: ", chooseFilePath)
+	log.Println("Selected file path: ", selectedFilePath)
 
-	display, err := display.NewDisplay(factories, chooseFilePath)
+	display, err := display.NewDisplay(factories, chooseFilePath, selectedFilePath)
 	if err != nil {
 		panic(err)
 	}

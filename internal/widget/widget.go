@@ -13,11 +13,12 @@ const (
 )
 
 type Context struct {
-	App             *tview.Application
-	CurrentPath     string
-	ShowHiddenFiles bool
-	OnWidgetResult  func(mode Mode, result string)
-	ChooseFilePath  *string
+	App              *tview.Application
+	CurrentPath      string
+	ShowHiddenFiles  bool
+	OnWidgetResult   func(mode Mode, result string)
+	ChooseFilePath   *string
+	SelectedFilePath *string
 }
 
 type WidgetInterface interface {
