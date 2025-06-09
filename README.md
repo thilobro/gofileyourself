@@ -48,6 +48,8 @@ Keys:
 - `q` - Quit
 - `S` - Quit and jump to last directory
 - `Ctrl-F` - Open finder
+- `r` - Cycle through history
+- `R` - Cycle backwards through history
 - `yy` - Yank selected file or directory
 - `pp` - Paste yanked file or directory
 - `dd` - Delete selected file

@@ -47,6 +47,7 @@ type FileExplorer struct {
 	yankedFile           string
 	markedFiles          []string
 	yankedMarkedFiles    []string
+	cycleRecentPosition  int
 }
 
 func (fe *FileExplorer) Root() tview.Primitive {
@@ -126,6 +127,7 @@ func NewFileExplorer(context *widget.Context) (*FileExplorer, error) {
 		yankedFile:          "",
 		markedFiles:         []string{},
 		yankedMarkedFiles:   []string{},
+		cycleRecentPosition: 0,
 	}
 
 	if err := fe.initialize(); err != nil {
@@ -540,6 +542,28 @@ func (fe *FileExplorer) jumpToAnchor(key string) {
 	fe.setCurrentLine(helper.FindExactItem(fe.currentList, anchorBase))
 }
 
+func (fe *FileExplorer) cycleRecent(isBackward bool) {
+	if isBackward {
+		fe.cycleRecentPosition--
+	} else {
+		fe.cycleRecentPosition++
+	}
+	if fe.cycleRecentPosition < 0 {
+		fe.cycleRecentPosition = 0
+	}
+	recentFile, err := helper.GetRecentFile(fe.cycleRecentPosition)
+	if err != nil {
+		if isBackward {
+			fe.cycleRecentPosition = 0
+		} else {
+			fe.cycleRecentPosition--
+		}
+		return
+	}
+	fe.setCurrentDirectory(filepath.Dir(recentFile))
+	fe.setCurrentLine(helper.FindExactItem(fe.currentList, filepath.Base(recentFile)))
+}
+
 // setupKeyBindings configures keyboard input handling
 func (fe *FileExplorer) SetupKeyBindings() {
 	fe.currentList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -652,6 +676,12 @@ func (fe *FileExplorer) SetupKeyBindings() {
 			return nil
 		}
 		switch rune {
+		case 'r':
+			fe.cycleRecent(false)
+			return nil
+		case 'R':
+			fe.cycleRecent(true)
+			return nil
 		case 'M':
 			fe.toggleMarkForCurrentFile()
 			return nil
