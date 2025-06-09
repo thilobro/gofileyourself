@@ -2,6 +2,7 @@ package helper
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -223,7 +224,43 @@ func OpenInNvim(path string, selectedFilePath *string, app *tview.Application) e
 		cmd.Run()
 		app.Stop()
 	}
+	historyPath := filepath.Join(os.Getenv("HOME"), ".gofileyourselfhistory")
+	historyCmd := exec.Command("sh", "-c", "echo \""+path+"\" >> "+historyPath)
+	historyCmd.Stdin = os.Stdin
+	historyCmd.Stdout = os.Stdout
+	historyCmd.Stderr = os.Stderr
+	historyCmd.Run()
+	TrimAndGetRecentFiles(historyPath)
 	return nil
+}
+
+func TrimAndGetRecentFiles(path string) []string {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return []string{}
+	}
+	lines := strings.Split(string(content), "\n")
+	lenLines := len(lines)
+	maxLines := 5
+	if lenLines > maxLines {
+		historyCmd := exec.Command("sh", "-c", "sed '1,"+strconv.Itoa(lenLines-maxLines)+"d' -i "+path)
+		historyCmd.Stdin = os.Stdin
+		historyCmd.Stdout = os.Stdout
+		historyCmd.Stderr = os.Stderr
+		historyCmd.Run()
+		return lines[lenLines-maxLines:]
+	}
+	return lines
+}
+
+func GetRecentFile(fileIndex int) (string, error) {
+	historyPath := filepath.Join(os.Getenv("HOME"), ".gofileyourselfhistory")
+	lines := TrimAndGetRecentFiles(historyPath)
+	lenLines := len(lines)
+	if fileIndex >= lenLines {
+		return "", errors.New("file index out of range")
+	}
+	return lines[lenLines-fileIndex-1], nil
 }
 
 func IsDirectoryEmpty(path string) (bool, error) {
