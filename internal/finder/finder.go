@@ -37,7 +37,7 @@ func NewFinder(context *widget.Context) (*Finder, error) {
 		selectedList:    tview.NewList().ShowSecondaryText(false),
 		searchTerm:      "",
 		fuzzySearchQuit: make(chan bool),
-		listUpdateChan:  make(chan *tview.List, 1), // Buffered channel
+		listUpdateChan:  make(chan *tview.List, 10), // Buffered channel
 	}
 	finder.resetFileList()
 	finder.searchedList = finder.fileList
@@ -60,6 +60,7 @@ func (finder *Finder) handleListUpdates() {
 	for newList := range finder.listUpdateChan {
 		finder.searchedList = newList
 		finder.context.App.QueueUpdateDraw(func() {
+			finder.setCurrentLine(0)
 			finder.Draw()
 		})
 	}
@@ -67,6 +68,12 @@ func (finder *Finder) handleListUpdates() {
 
 func (finder *Finder) setCurrentLine(lineIndex int) error {
 	if lineIndex < 0 || lineIndex >= finder.searchedList.GetItemCount() {
+		textView := tview.NewTextView().
+			SetDynamicColors(true).
+			SetRegions(true).
+			SetWordWrap(true)
+		textView.SetText("[gray::]No matches...[-::]")
+		finder.selectedList = textView
 		return nil
 	}
 	finder.searchedList.SetCurrentItem(lineIndex)
@@ -256,7 +263,7 @@ func (finder *Finder) fuzzySearch(text string) {
 	}
 
 	if len(matches) > 0 {
-		newList.SetCurrentItem(0)
+		finder.setCurrentLine(0)
 	}
 
 	// Send the new list through the channel
