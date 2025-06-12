@@ -149,6 +149,7 @@ func (fe *FileExplorer) initialize() error {
 		fe.setCurrentDirectory(fe.context.CurrentPath)
 	}
 	fe.currentFocusedWidget = fe.currentList
+	fe.setLastDirectory()
 	fe.Draw()
 	return nil
 }
@@ -388,10 +389,18 @@ func (fe *FileExplorer) handleFooterInput(prompt string) {
 	fe.Draw()
 }
 
-func (fe *FileExplorer) quitAndChangeDirectory() {
+func (fe *FileExplorer) setLastDirectory() error {
 	// Write current path to a temporary file that can be sourced by shell
 	tempFile := os.Getenv("HOME") + "/.gofileyourself_lastdir"
-	if err := os.WriteFile(tempFile, []byte(fe.context.CurrentPath), 0644); err != nil {
+	if err := os.WriteFile(tempFile, []byte(fe.context.CurrentPath), 0o644); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (fe *FileExplorer) quitAndChangeDirectory() {
+	err := fe.setLastDirectory()
+	if err != nil {
 		return
 	}
 	fe.context.App.Stop()
