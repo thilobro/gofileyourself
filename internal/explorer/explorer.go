@@ -324,7 +324,7 @@ func (fe *FileExplorer) runFooterCommand(inputText string) {
 			fe.context.App.Stop()
 		case "mkdir":
 			if len(parts) > 1 {
-				helper.CreateDirectory(parts[1])
+				helper.CreateDirectory(filepath.Join(fe.context.CurrentPath, parts[1]))
 				fe.setCurrentDirectory(fe.context.CurrentPath)
 			}
 		case "rename":
