@@ -338,7 +338,7 @@ func (fe *FileExplorer) runFooterCommand(inputText string) {
 			fe.renameMarkedFiles()
 		case "touch":
 			if len(parts) > 1 {
-				helper.TouchFile(parts[1])
+				helper.TouchFile(filepath.Join(fe.context.CurrentPath, parts[1]))
 				fe.setCurrentDirectory(fe.context.CurrentPath)
 			}
 		}
