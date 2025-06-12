@@ -159,9 +159,11 @@ func (fe *FileExplorer) Draw() {
 	fe.listFlex.Clear()
 	if fe.parentList != nil {
 		fe.listFlex.AddItem(fe.parentList, 0, 1, false)
+		fe.listFlex.AddItem(tview.NewBox(), 2, 0, false)
 	}
 	if fe.currentList != nil {
 		fe.listFlex.AddItem(fe.currentList, 0, 2, true)
+		fe.listFlex.AddItem(tview.NewBox(), 2, 0, false)
 	}
 	if fe.selectedList != nil {
 		fe.listFlex.AddItem(fe.selectedList, 0, 3, false)
