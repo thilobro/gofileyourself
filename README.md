@@ -37,6 +37,8 @@ Keys:
 
 - `Ctrl-H` - Toggle hidden files
 - `Ctrl-C` - Quit
+- `Ctrl-F` - Open finder
+- `Ctrl-R` - Open finder for recently opened files
 
 ### Explorer
 
@@ -48,9 +50,8 @@ Keys:
 - `/` - Search in current directory
 - `q` - Quit
 - `S` - Quit and jump to last directory
-- `Ctrl-F` - Open finder
-- `r` - Cycle through history
-- `R` - Cycle backwards through history
+- `r` - Cycle through recently opened files
+- `R` - Cycle backwards through recently opened files
 - `yy` - Yank selected file or directory
 - `pp` - Paste yanked file or directory
 - `dd` - Delete selected file

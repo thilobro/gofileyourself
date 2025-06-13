@@ -11,6 +11,7 @@ type Mode int
 const (
 	Explorer Mode = iota
 	Find
+	FindRecent
 )
 
 type Context struct {

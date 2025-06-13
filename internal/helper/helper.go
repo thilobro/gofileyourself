@@ -383,3 +383,11 @@ func AppendOrReplaceLineInFile(path string, content string) error {
 	newContent := strings.Join(lines, "\n") + "\n"
 	return os.WriteFile(path, []byte(newContent), 0o644)
 }
+
+func GetAbsFilePath(filePath string, dirPath string) string {
+	if filepath.IsAbs(filePath) {
+		return filePath
+	} else {
+		return filepath.Join(dirPath, filePath)
+	}
+}
