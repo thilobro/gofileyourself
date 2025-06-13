@@ -31,6 +31,7 @@ Flags:
 - `--debug` - Print debug log to debug.log
 - `--choosefiles=<file>` - Use as a file chooser that writes selected files to the given file
 - `--selectfile=<file>` - Select the given file path when opening the file manager
+- `--config=<path>` - Default is `~/.gofindyourself.yaml`
 
 Keys:
 
@@ -78,6 +79,7 @@ Keys:
 - `keyUp/keyDown` - Move cursor down/up
 - `Enter` - Open file
 - `Esc` - Go back to explorer
+
 
 ## Project Status
 

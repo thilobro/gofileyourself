@@ -207,7 +207,7 @@ func LoadFilePreview(path string) (*tview.TextView, error) {
 }
 
 // OpenInNvim is a helper function that opens a file in neovim
-func OpenInNvim(path string, selectedFilePath *string, app *tview.Application) error {
+func OpenInNvim(path string, selectedFilePath *string, app *tview.Application, maxHistoryLen int) error {
 	if selectedFilePath == nil {
 		app.Suspend(func() {
 			cmd := exec.Command("nvim", path)
@@ -225,37 +225,36 @@ func OpenInNvim(path string, selectedFilePath *string, app *tview.Application) e
 		app.Stop()
 	}
 	historyPath := filepath.Join(os.Getenv("HOME"), ".gofileyourselfhistory")
-	historyCmd := exec.Command("sh", "-c", "echo \""+path+"\" >> "+historyPath)
+	historyCmd := exec.Command("sh", "-c", "[ \"$(tail -n 1 "+historyPath+" 2>/dev/null)\" != "+path+" ] && echo \""+path+"\" >> "+historyPath)
 	historyCmd.Stdin = os.Stdin
 	historyCmd.Stdout = os.Stdout
 	historyCmd.Stderr = os.Stderr
 	historyCmd.Run()
-	TrimAndGetRecentFiles(historyPath)
+	TrimAndGetRecentFiles(historyPath, maxHistoryLen)
 	return nil
 }
 
-func TrimAndGetRecentFiles(path string) []string {
+func TrimAndGetRecentFiles(path string, maxHistoryLen int) []string {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return []string{}
 	}
 	lines := strings.Split(string(content), "\n")
 	lenLines := len(lines)
-	maxLines := 50
-	if lenLines > maxLines {
-		historyCmd := exec.Command("sh", "-c", "sed '1,"+strconv.Itoa(lenLines-maxLines)+"d' -i "+path)
+	if lenLines > maxHistoryLen {
+		historyCmd := exec.Command("sh", "-c", "sed '1,"+strconv.Itoa(lenLines-maxHistoryLen)+"d' -i "+path)
 		historyCmd.Stdin = os.Stdin
 		historyCmd.Stdout = os.Stdout
 		historyCmd.Stderr = os.Stderr
 		historyCmd.Run()
-		return lines[lenLines-maxLines:]
+		return lines[lenLines-maxHistoryLen:]
 	}
 	return lines
 }
 
-func GetRecentFile(fileIndex int) (string, error) {
+func GetRecentFile(fileIndex int, maxHistoryLen int) (string, error) {
 	historyPath := filepath.Join(os.Getenv("HOME"), ".gofileyourselfhistory")
-	lines := TrimAndGetRecentFiles(historyPath)
+	lines := TrimAndGetRecentFiles(historyPath, maxHistoryLen)
 	lenLines := len(lines)
 	if fileIndex >= lenLines {
 		return "", errors.New("file index out of range")

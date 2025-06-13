@@ -453,7 +453,7 @@ func (fe *FileExplorer) renameMarkedFiles() {
 	for _, file := range fe.markedFiles {
 		fmt.Fprintln(tempFile, filepath.Base(file))
 	}
-	helper.OpenInNvim(tempFile.Name(), fe.context.ChooseFilePath, fe.context.App)
+	helper.OpenInNvim(tempFile.Name(), fe.context.ChooseFilePath, fe.context.App, fe.context.Config.HistoryLen)
 
 	file, err := os.Open(tempFile.Name())
 	if err != nil {
@@ -562,7 +562,7 @@ func (fe *FileExplorer) cycleRecent(isBackward bool) {
 	if fe.cycleRecentPosition < 0 {
 		fe.cycleRecentPosition = 0
 	}
-	recentFile, err := helper.GetRecentFile(fe.cycleRecentPosition)
+	recentFile, err := helper.GetRecentFile(fe.cycleRecentPosition, fe.context.Config.HistoryLen)
 	if err != nil {
 		if isBackward {
 			fe.cycleRecentPosition = 0
@@ -724,7 +724,7 @@ func (fe *FileExplorer) SetupKeyBindings() {
 					return event
 				}
 			} else {
-				helper.OpenInNvim(filePath, fe.context.ChooseFilePath, fe.context.App)
+				helper.OpenInNvim(filePath, fe.context.ChooseFilePath, fe.context.App, fe.context.Config.HistoryLen)
 				return nil
 			}
 			return nil
