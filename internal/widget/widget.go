@@ -3,6 +3,7 @@ package widget
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"github.com/thilobro/gofileyourself/internal/config"
 )
 
 type Mode int
@@ -19,6 +20,7 @@ type Context struct {
 	OnWidgetResult   func(mode Mode, result string)
 	ChooseFilePath   *string
 	SelectedFilePath *string
+	Config           *config.Config
 }
 
 type WidgetInterface interface {

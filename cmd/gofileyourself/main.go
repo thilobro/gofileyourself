@@ -13,6 +13,8 @@ import (
 )
 
 func main() {
+	defaultConfig := os.Getenv("HOME") + "/.gofileyourself.yaml"
+	config := flag.String("config", defaultConfig, "Path to config file")
 	debug := flag.Bool("debug", false, "Enable debug logging")
 	cfp := flag.String("choosefiles", "", "Use as a file chooser")
 	sf := flag.String("selectfile", "", "The file that was selected")
@@ -32,7 +34,7 @@ func main() {
 	}
 
 	if *debug {
-		logFile, err := os.OpenFile("debug.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		logFile, err := os.OpenFile("debug.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o666)
 		if err != nil {
 			log.Fatalf("Error opening log file: %v", err)
 		}
@@ -50,9 +52,8 @@ func main() {
 		widget.Explorer: &explorer.Factory{},
 		widget.Find:     &finder.Factory{},
 	}
-	log.Println("Selected file path: ", selectedFilePath)
 
-	display, err := display.NewDisplay(factories, chooseFilePath, selectedFilePath)
+	display, err := display.NewDisplay(factories, chooseFilePath, selectedFilePath, config)
 	if err != nil {
 		panic(err)
 	}

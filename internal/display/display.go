@@ -3,6 +3,7 @@ package display
 import (
 	"os"
 
+	"github.com/thilobro/gofileyourself/internal/config"
 	"github.com/thilobro/gofileyourself/internal/widget"
 
 	"github.com/gdamore/tcell/v2"
@@ -62,8 +63,9 @@ func (display *Display) setActiveWidgetBasedOnMode(mode widget.Mode) {
 	display.context.App.SetRoot(display.activeWidget.Root(), true)
 }
 
-func NewDisplay(factories map[widget.Mode]widget.Factory, chooseFilePath *string, selectedFilePath *string) (*Display, error) {
+func NewDisplay(factories map[widget.Mode]widget.Factory, chooseFilePath *string, selectedFilePath *string, configPath *string) (*Display, error) {
 	app := tview.NewApplication()
+	config, _ := config.NewConfig(configPath)
 	currentPath, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -78,6 +80,7 @@ func NewDisplay(factories map[widget.Mode]widget.Factory, chooseFilePath *string
 		OnWidgetResult:   display.onWidgetResult,
 		ChooseFilePath:   chooseFilePath,
 		SelectedFilePath: selectedFilePath,
+		Config:           config,
 	}
 	explorerWidget, err := explorerFactory.New(context)
 	if err != nil {
