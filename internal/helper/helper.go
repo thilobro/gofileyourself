@@ -120,7 +120,7 @@ func LoadDirectory(path string, showHiddenFiles bool, recursive bool, markedItem
 						return err
 					}
 				}
-			} else if info.Mode()&0111 != 0 {
+			} else if info.Mode()&0o111 != 0 {
 				displayName += "*"
 			}
 
@@ -241,7 +241,7 @@ func TrimAndGetRecentFiles(path string) []string {
 	}
 	lines := strings.Split(string(content), "\n")
 	lenLines := len(lines)
-	maxLines := 5
+	maxLines := 50
 	if lenLines > maxLines {
 		historyCmd := exec.Command("sh", "-c", "sed '1,"+strconv.Itoa(lenLines-maxLines)+"d' -i "+path)
 		historyCmd.Stdin = os.Stdin
@@ -289,7 +289,7 @@ func DeleteItem[T comparable](slice []T, element T) []T {
 }
 
 func CreateDirectory(path string) error {
-	return os.MkdirAll(path, 0755)
+	return os.MkdirAll(path, 0o755)
 }
 
 func RenameFile(oldPath string, newPath string) error {
@@ -331,7 +331,7 @@ func GetLineWithKey(path string, key string) (string, error) {
 func AppendOrReplaceLineInFile(path string, content string) error {
 	// Create directory if it doesn't exist
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
 
@@ -343,7 +343,7 @@ func AppendOrReplaceLineInFile(path string, content string) error {
 	// Check if file exists
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		// File doesn't exist, create and write content
-		return os.WriteFile(path, []byte(content), 0644)
+		return os.WriteFile(path, []byte(content), 0o644)
 	}
 
 	// File exists, read its contents
@@ -382,5 +382,5 @@ func AppendOrReplaceLineInFile(path string, content string) error {
 
 	// Write back to file
 	newContent := strings.Join(lines, "\n") + "\n"
-	return os.WriteFile(path, []byte(newContent), 0644)
+	return os.WriteFile(path, []byte(newContent), 0o644)
 }
