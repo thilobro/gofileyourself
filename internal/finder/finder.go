@@ -359,7 +359,7 @@ func (finder *Finder) showRecentHistory() {
 	scanner := bufio.NewScanner(historyFile)
 	for scanner.Scan() {
 		line := scanner.Text()
-		finder.fileList.AddItem(line, line, 0, nil)
+		finder.fileList.InsertItem(0, line, line, 0, nil)
 	}
 	finder.searchedList = finder.fileList
 	finder.searchInDirectory()
