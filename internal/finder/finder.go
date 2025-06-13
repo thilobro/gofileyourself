@@ -1,6 +1,7 @@
 package finder
 
 import (
+	"bufio"
 	"os"
 	"path/filepath"
 	"slices"
@@ -51,7 +52,6 @@ func NewFinder(context *widget.Context) (*Finder, error) {
 	if err != nil {
 		return nil, err
 	}
-	finder.setCurrentLine(0)
 
 	return finder, nil
 }
@@ -79,7 +79,7 @@ func (finder *Finder) setCurrentLine(lineIndex int) error {
 	finder.searchedList.SetCurrentItem(lineIndex)
 
 	_, selectedName := finder.searchedList.GetItemText(lineIndex)
-	return finder.setSelectedDirectory(filepath.Join(finder.context.CurrentPath, selectedName))
+	return finder.setSelectedDirectory(helper.GetAbsFilePath(selectedName, finder.context.CurrentPath))
 }
 
 // setSelectedDirectory updates the selected directory/file preview
@@ -113,6 +113,9 @@ func (finder *Finder) SetupKeyBindings() {
 	finder.rootFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		defer finder.Draw()
 		switch event.Key() {
+		case tcell.KeyCtrlR:
+			finder.showRecentHistory()
+			return nil
 		case tcell.KeyCtrlH:
 			finder.context.ShowHiddenFiles = !finder.context.ShowHiddenFiles
 
@@ -136,7 +139,7 @@ func (finder *Finder) SetupKeyBindings() {
 		case tcell.KeyEnter:
 			currentItem := finder.searchedList.GetCurrentItem()
 			_, fileName := finder.searchedList.GetItemText(currentItem)
-			filePath := filepath.Join(finder.context.CurrentPath, fileName)
+			filePath := helper.GetAbsFilePath(fileName, finder.context.CurrentPath)
 
 			fileInfo, err := os.Stat(filePath)
 			if err != nil {
@@ -287,7 +290,6 @@ func (finder *Finder) resetFileList() error {
 }
 
 func (finder *Finder) searchInDirectory() error {
-	finder.resetFileList()
 	finder.setCurrentLine(0)
 	finder.Draw()
 	finder.handleFooterInput()
@@ -344,4 +346,21 @@ func (finder *Finder) applyTheme() {
 // GetInputCapture returns the input capture function for the finder
 func (finder *Finder) GetInputCapture() func(*tcell.EventKey) *tcell.EventKey {
 	return finder.rootFlex.GetInputCapture()
+}
+
+func (finder *Finder) showRecentHistory() {
+	finder.fileList.Clear()
+	historyPath := filepath.Join(os.Getenv("HOME"), ".gofileyourselfhistory")
+	historyFile, err := os.Open(historyPath)
+	if err != nil {
+		return
+	}
+	defer historyFile.Close()
+	scanner := bufio.NewScanner(historyFile)
+	for scanner.Scan() {
+		line := scanner.Text()
+		finder.fileList.AddItem(line, line, 0, nil)
+	}
+	finder.searchedList = finder.fileList
+	finder.searchInDirectory()
 }

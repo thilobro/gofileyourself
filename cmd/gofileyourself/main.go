@@ -49,8 +49,9 @@ func main() {
 	//
 	// Set up the factories for each mode
 	factories := map[widget.Mode]widget.Factory{
-		widget.Explorer: &explorer.Factory{},
-		widget.Find:     &finder.Factory{},
+		widget.Explorer:   &explorer.Factory{},
+		widget.Find:       &finder.Factory{},
+		widget.FindRecent: &finder.Factory{},
 	}
 
 	display, err := display.NewDisplay(factories, chooseFilePath, selectedFilePath, config)
