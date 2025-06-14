@@ -2,7 +2,7 @@
 
 ## Motivation
 
-This is a ranger FM clone in go. Motivation behind this is that I want to learn go.
+This is a [Ranger FM](https://github.com/ranger/ranger/) clone in go. Motivation behind this is that I want to learn go.
 
 ## Installation
 
