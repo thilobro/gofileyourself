@@ -82,6 +82,11 @@ Keys:
 - `Esc` - Go back to explorer
 
 
+## Neovim Plugin
+
+For a basic Neovim plugin, please check out [gofindyourself.nvim](https://github.com/thilobro/gofindyourself.nvim).
+
+
 ## Project Status
 
 This project is under active development. Features and APIs may change.
