@@ -333,7 +333,8 @@ func (fe *FileExplorer) runFooterCommand(inputText string) {
 			if len(parts) > 1 {
 				_, currentName := fe.currentList.GetItemText(fe.currentList.GetCurrentItem())
 				currentPath := filepath.Join(fe.context.CurrentPath, currentName)
-				helper.RenameFile(currentPath, parts[1])
+				newPath := filepath.Join(fe.context.CurrentPath, parts[1])
+				helper.RenameFile(currentPath, newPath)
 				fe.setCurrentDirectory(fe.context.CurrentPath)
 			}
 		case "mrename":

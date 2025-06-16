@@ -288,14 +288,17 @@ func DeleteItem[T comparable](slice []T, element T) []T {
 }
 
 func CreateDirectory(path string) error {
+	path = generateDuplicateFileName(path, 0)
 	return os.MkdirAll(path, 0o755)
 }
 
 func RenameFile(oldPath string, newPath string) error {
+	newPath = generateDuplicateFileName(newPath, 0)
 	return os.Rename(oldPath, newPath)
 }
 
 func TouchFile(path string) error {
+	path = generateDuplicateFileName(path, 0)
 	f, err := os.Create(path)
 	if err != nil {
 		return err
