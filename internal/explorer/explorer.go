@@ -102,9 +102,13 @@ func (fe *FileExplorer) applyTheme() {
 
 func (fe *FileExplorer) highlightSearchInput() {
 	for i := 0; i < fe.currentList.GetItemCount(); i++ {
-		_, text := fe.currentList.GetItemText(i)
-		indeces := gostring.IndexAll(text, fe.searchInput, -1)
-		fe.currentList.SetItemText(i, gostring.HighlightString(text, indeces, "[red::b]", "[-::-]"), text)
+		displayName, text := fe.currentList.GetItemText(i)
+		startHighlightMarker := "[red::b]"
+		endHighlightMarker := "[-::-]"
+		displayNameWithoutHighlight := strings.Replace(displayName, startHighlightMarker, "", -1)
+		displayNameWithoutHighlight = strings.Replace(displayNameWithoutHighlight, endHighlightMarker, "", -1)
+		indeces := gostring.IndexAll(displayNameWithoutHighlight, fe.searchInput, -1)
+		fe.currentList.SetItemText(i, gostring.HighlightString(displayNameWithoutHighlight, indeces, "[red::b]", "[-::-]"), text)
 	}
 }
 
