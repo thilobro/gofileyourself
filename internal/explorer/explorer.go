@@ -9,9 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/thilobro/gofileyourself/internal/formatter"
 	"github.com/thilobro/gofileyourself/internal/helper"
-	"github.com/thilobro/gofileyourself/internal/theme"
 	"github.com/thilobro/gofileyourself/internal/widget"
 
 	gostring "github.com/boyter/go-string"
@@ -22,10 +20,6 @@ import (
 const (
 	MAX_SCROLL_AMOUNT = 20
 )
-
-func init() {
-	formatter.RegisterCustomFormatter()
-}
 
 // FileExplorer represents the state and behavior of the file explorer
 type FileExplorer struct {
@@ -55,48 +49,48 @@ func (fe *FileExplorer) Root() tview.Primitive {
 }
 
 func (fe *FileExplorer) applyTheme() {
-	explorerTheme := theme.GetExplorerTheme()
+	theme := fe.context.Theme
 
 	// Set global background through root flex
-	fe.rootFlex.SetBackgroundColor(explorerTheme.Bg0)
-	fe.listFlex.SetBackgroundColor(explorerTheme.Bg0)
+	fe.rootFlex.SetBackgroundColor(theme.Bg0)
+	fe.listFlex.SetBackgroundColor(theme.Bg0)
 
 	// Style the lists
 	fe.currentList.
-		SetMainTextColor(explorerTheme.Fg1).
-		SetSelectedTextColor(explorerTheme.Black).
-		SetSelectedBackgroundColor(explorerTheme.Aqua).
-		SetBackgroundColor(explorerTheme.Bg0)
+		SetMainTextColor(theme.Fg1).
+		SetSelectedTextColor(theme.Black).
+		SetSelectedBackgroundColor(theme.Aqua).
+		SetBackgroundColor(theme.Bg0)
 
 	if fe.parentList != nil {
 		if list, ok := fe.parentList.(*tview.List); ok {
 			list.
-				SetMainTextColor(explorerTheme.Fg1).
-				SetSelectedTextColor(explorerTheme.Black).
-				SetSelectedBackgroundColor(explorerTheme.Blue).
-				SetBackgroundColor(explorerTheme.Bg0)
+				SetMainTextColor(theme.Fg1).
+				SetSelectedTextColor(theme.Black).
+				SetSelectedBackgroundColor(theme.Blue).
+				SetBackgroundColor(theme.Bg0)
 		}
 	}
 
 	// Style the selected list/preview
 	if list, ok := fe.selectedList.(*tview.List); ok {
 		list.
-			SetMainTextColor(explorerTheme.Fg1).
-			SetSelectedTextColor(explorerTheme.Black).
-			SetSelectedBackgroundColor(explorerTheme.Green).
-			SetBackgroundColor(explorerTheme.Bg0)
+			SetMainTextColor(theme.Fg1).
+			SetSelectedTextColor(theme.Black).
+			SetSelectedBackgroundColor(theme.Green).
+			SetBackgroundColor(theme.Bg0)
 	} else if textView, ok := fe.selectedList.(*tview.TextView); ok {
 		textView.
-			SetTextColor(explorerTheme.Fg0).
-			SetBackgroundColor(explorerTheme.Bg0)
+			SetTextColor(theme.Fg0).
+			SetBackgroundColor(theme.Bg0)
 	}
 
 	// Style the footer
 	if fe.footer != nil {
 		fe.footer.
-			SetFieldBackgroundColor(explorerTheme.Bg1).
-			SetFieldTextColor(explorerTheme.Fg0).
-			SetBackgroundColor(explorerTheme.Bg0)
+			SetFieldBackgroundColor(theme.Bg1).
+			SetFieldTextColor(theme.Fg0).
+			SetBackgroundColor(theme.Bg0)
 	}
 }
 

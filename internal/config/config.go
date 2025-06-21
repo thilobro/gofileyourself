@@ -10,7 +10,8 @@ import (
 )
 
 type Config struct {
-	HistoryLen int `default:"50" yaml:"history_len"`
+	HistoryLen int    `default:"50" yaml:"history_len"`
+	ThemePath  string `default:".gofileyourself_theme.yaml" yaml:"theme_path"`
 }
 
 func NewConfig(configPath *string) (*Config, error) {
@@ -27,6 +28,5 @@ func NewConfig(configPath *string) (*Config, error) {
 		log.Fatal(err)
 		panic(err)
 	}
-	log.Print(config)
 	return &config, nil
 }

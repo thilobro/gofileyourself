@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/thilobro/gofileyourself/internal/helper"
-	"github.com/thilobro/gofileyourself/internal/theme"
 	"github.com/thilobro/gofileyourself/internal/widget"
 
 	"github.com/gdamore/tcell/v2"
@@ -321,24 +320,24 @@ func (finder *Finder) Run() error {
 }
 
 func (finder *Finder) applyTheme() {
-	explorerTheme := theme.GetExplorerTheme()
+	theme := finder.context.Theme
 
 	// Set global background through root flex
-	finder.rootFlex.SetBackgroundColor(explorerTheme.Bg0)
+	finder.rootFlex.SetBackgroundColor(theme.Bg0)
 
 	// Style the lists
 	finder.searchedList.
-		SetMainTextColor(explorerTheme.Fg1).
-		SetSelectedTextColor(explorerTheme.Black).
-		SetSelectedBackgroundColor(explorerTheme.Aqua).
-		SetBackgroundColor(explorerTheme.Bg0)
+		SetMainTextColor(theme.Fg1).
+		SetSelectedTextColor(theme.Black).
+		SetSelectedBackgroundColor(theme.Aqua).
+		SetBackgroundColor(theme.Bg0)
 
 	// Style the footer
 	if finder.footer != nil {
 		finder.footer.
-			SetFieldBackgroundColor(explorerTheme.Bg1).
-			SetFieldTextColor(explorerTheme.Fg0).
-			SetBackgroundColor(explorerTheme.Bg0).
+			SetFieldBackgroundColor(theme.Bg1).
+			SetFieldTextColor(theme.Fg0).
+			SetBackgroundColor(theme.Bg0).
 			SetBorder(true).Blur()
 	}
 }
