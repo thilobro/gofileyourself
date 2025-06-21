@@ -21,8 +21,8 @@ const (
 	MAX_SCROLL_AMOUNT = 20
 )
 
-// FileExplorer represents the state and behavior of the file explorer
-type FileExplorer struct {
+// Explorer represents the state and behavior of the file explorer
+type Explorer struct {
 	context              *widget.Context
 	currentList          *tview.List
 	parentList           tview.Primitive
@@ -44,26 +44,26 @@ type FileExplorer struct {
 	cycleRecentPosition  int
 }
 
-func (fe *FileExplorer) Root() tview.Primitive {
-	return fe.rootFlex
+func (explorer *Explorer) Root() tview.Primitive {
+	return explorer.rootFlex
 }
 
-func (fe *FileExplorer) applyTheme() {
-	theme := fe.context.Theme
+func (explorer *Explorer) applyTheme() {
+	theme := explorer.context.Theme
 
 	// Set global background through root flex
-	fe.rootFlex.SetBackgroundColor(theme.Bg0)
-	fe.listFlex.SetBackgroundColor(theme.Bg0)
+	explorer.rootFlex.SetBackgroundColor(theme.Bg0)
+	explorer.listFlex.SetBackgroundColor(theme.Bg0)
 
 	// Style the lists
-	fe.currentList.
+	explorer.currentList.
 		SetMainTextColor(theme.Fg1).
 		SetSelectedTextColor(theme.Black).
 		SetSelectedBackgroundColor(theme.Aqua).
 		SetBackgroundColor(theme.Bg0)
 
-	if fe.parentList != nil {
-		if list, ok := fe.parentList.(*tview.List); ok {
+	if explorer.parentList != nil {
+		if list, ok := explorer.parentList.(*tview.List); ok {
 			list.
 				SetMainTextColor(theme.Fg1).
 				SetSelectedTextColor(theme.Black).
@@ -73,42 +73,42 @@ func (fe *FileExplorer) applyTheme() {
 	}
 
 	// Style the selected list/preview
-	if list, ok := fe.selectedList.(*tview.List); ok {
+	if list, ok := explorer.selectedList.(*tview.List); ok {
 		list.
 			SetMainTextColor(theme.Fg1).
 			SetSelectedTextColor(theme.Black).
 			SetSelectedBackgroundColor(theme.Green).
 			SetBackgroundColor(theme.Bg0)
-	} else if textView, ok := fe.selectedList.(*tview.TextView); ok {
+	} else if textView, ok := explorer.selectedList.(*tview.TextView); ok {
 		textView.
 			SetTextColor(theme.Fg0).
 			SetBackgroundColor(theme.Bg0)
 	}
 
 	// Style the footer
-	if fe.footer != nil {
-		fe.footer.
+	if explorer.footer != nil {
+		explorer.footer.
 			SetFieldBackgroundColor(theme.Bg1).
 			SetFieldTextColor(theme.Fg0).
 			SetBackgroundColor(theme.Bg0)
 	}
 }
 
-func (fe *FileExplorer) highlightSearchInput() {
-	for i := 0; i < fe.currentList.GetItemCount(); i++ {
-		displayName, text := fe.currentList.GetItemText(i)
+func (explorer *Explorer) highlightSearchInput() {
+	for i := 0; i < explorer.currentList.GetItemCount(); i++ {
+		displayName, text := explorer.currentList.GetItemText(i)
 		startHighlightMarker := "[red::b]"
 		endHighlightMarker := "[-::-]"
 		displayNameWithoutHighlight := strings.Replace(displayName, startHighlightMarker, "", -1)
 		displayNameWithoutHighlight = strings.Replace(displayNameWithoutHighlight, endHighlightMarker, "", -1)
-		indeces := gostring.IndexAll(displayNameWithoutHighlight, fe.searchInput, -1)
-		fe.currentList.SetItemText(i, gostring.HighlightString(displayNameWithoutHighlight, indeces, "[red::b]", "[-::-]"), text)
+		indeces := gostring.IndexAll(displayNameWithoutHighlight, explorer.searchInput, -1)
+		explorer.currentList.SetItemText(i, gostring.HighlightString(displayNameWithoutHighlight, indeces, "[red::b]", "[-::-]"), text)
 	}
 }
 
-// NewFileExplorer creates and initializes a new FileExplorer
-func NewFileExplorer(context *widget.Context) (*FileExplorer, error) {
-	fe := &FileExplorer{
+// NewExplorer creates and initializes a new Explorer
+func NewExplorer(context *widget.Context) (*Explorer, error) {
+	explorer := &Explorer{
 		context:             context,
 		currentList:         tview.NewList(),
 		parentList:          tview.NewList(),
@@ -128,101 +128,101 @@ func NewFileExplorer(context *widget.Context) (*FileExplorer, error) {
 		cycleRecentPosition: 0,
 	}
 
-	if err := fe.initialize(); err != nil {
+	if err := explorer.initialize(); err != nil {
 		return nil, err
 	}
 
-	return fe, nil
+	return explorer, nil
 }
 
-// initialize sets up the initial state of the FileExplorer
-func (fe *FileExplorer) initialize() error {
-	fe.SetupKeyBindings()
-	if fe.context.SelectedFilePath != nil {
-		fe.context.CurrentPath = filepath.Dir(*fe.context.SelectedFilePath)
-		fe.setCurrentDirectory(fe.context.CurrentPath)
-		selectedFileIndex := helper.FindExactItem(fe.currentList, filepath.Base(*fe.context.SelectedFilePath))
-		fe.currentList.SetCurrentItem(selectedFileIndex)
+// initialize sets up the initial state of the Explorer
+func (explorer *Explorer) initialize() error {
+	explorer.SetupKeyBindings()
+	if explorer.context.SelectedFilePath != nil {
+		explorer.context.CurrentPath = filepath.Dir(*explorer.context.SelectedFilePath)
+		explorer.setCurrentDirectory(explorer.context.CurrentPath)
+		selectedFileIndex := helper.FindExactItem(explorer.currentList, filepath.Base(*explorer.context.SelectedFilePath))
+		explorer.currentList.SetCurrentItem(selectedFileIndex)
 	} else {
-		fe.setCurrentDirectory(fe.context.CurrentPath)
+		explorer.setCurrentDirectory(explorer.context.CurrentPath)
 	}
-	fe.currentFocusedWidget = fe.currentList
-	fe.setLastDirectory()
-	fe.Draw()
+	explorer.currentFocusedWidget = explorer.currentList
+	explorer.setLastDirectory()
+	explorer.Draw()
 	return nil
 }
 
 // draw updates the UI
-func (fe *FileExplorer) Draw() {
-	fe.listFlex.Clear()
-	if fe.parentList != nil {
-		fe.listFlex.AddItem(fe.parentList, 0, 1, false)
-		fe.listFlex.AddItem(tview.NewBox(), 2, 0, false)
+func (explorer *Explorer) Draw() {
+	explorer.listFlex.Clear()
+	if explorer.parentList != nil {
+		explorer.listFlex.AddItem(explorer.parentList, 0, 1, false)
+		explorer.listFlex.AddItem(tview.NewBox(), 2, 0, false)
 	}
-	if fe.currentList != nil {
-		fe.listFlex.AddItem(fe.currentList, 0, 2, true)
-		fe.listFlex.AddItem(tview.NewBox(), 2, 0, false)
+	if explorer.currentList != nil {
+		explorer.listFlex.AddItem(explorer.currentList, 0, 2, true)
+		explorer.listFlex.AddItem(tview.NewBox(), 2, 0, false)
 	}
-	if fe.selectedList != nil {
-		fe.listFlex.AddItem(fe.selectedList, 0, 3, false)
+	if explorer.selectedList != nil {
+		explorer.listFlex.AddItem(explorer.selectedList, 0, 3, false)
 	}
-	fe.rootFlex.Clear()
-	fe.rootFlex.SetDirection(tview.FlexRow)
-	if fe.header != nil {
-		fe.rootFlex.AddItem(fe.header, 3, 0, false)
+	explorer.rootFlex.Clear()
+	explorer.rootFlex.SetDirection(tview.FlexRow)
+	if explorer.header != nil {
+		explorer.rootFlex.AddItem(explorer.header, 3, 0, false)
 	}
-	fe.rootFlex.AddItem(fe.listFlex, 0, 1, true)
-	if fe.footer != nil {
-		fe.rootFlex.AddItem(fe.footer, 1, 0, false)
+	explorer.rootFlex.AddItem(explorer.listFlex, 0, 1, true)
+	if explorer.footer != nil {
+		explorer.rootFlex.AddItem(explorer.footer, 1, 0, false)
 	}
-	fe.context.App.SetRoot(fe.rootFlex, true)
-	fe.context.App.SetFocus(fe.currentFocusedWidget)
-	fe.applyTheme()
-	fe.highlightSearchInput()
+	explorer.context.App.SetRoot(explorer.rootFlex, true)
+	explorer.context.App.SetFocus(explorer.currentFocusedWidget)
+	explorer.applyTheme()
+	explorer.highlightSearchInput()
 }
 
-func (fe *FileExplorer) GetInputCapture() func(*tcell.EventKey) *tcell.EventKey {
-	if fe.isFooterActive && fe.footer != nil {
-		return fe.footer.GetInputCapture()
+func (explorer *Explorer) GetInputCapture() func(*tcell.EventKey) *tcell.EventKey {
+	if explorer.isFooterActive && explorer.footer != nil {
+		return explorer.footer.GetInputCapture()
 	}
-	return fe.currentList.GetInputCapture()
+	return explorer.currentList.GetInputCapture()
 }
 
 // setSelectedDirectory updates the selected directory/file preview
-func (fe *FileExplorer) setSelectedDirectory(selectedPath string) error {
+func (explorer *Explorer) setSelectedDirectory(selectedPath string) error {
 	selectedAbsolutePath, _ := filepath.Abs(selectedPath)
 	isDirEmpty, _ := helper.IsDirectoryEmpty(selectedAbsolutePath)
 	if isDirEmpty {
-		fe.selectedList = tview.NewTextArea().SetText("Directory is empty", false)
+		explorer.selectedList = tview.NewTextArea().SetText("Directory is empty", false)
 		return nil
 	}
-	selectedDirectoryIndex := fe.directoryToIndexMap[selectedAbsolutePath]
+	selectedDirectoryIndex := explorer.directoryToIndexMap[selectedAbsolutePath]
 
-	newSelectedList, err := helper.LoadDirectory(selectedPath, fe.context.ShowHiddenFiles, false, fe.markedFiles)
+	newSelectedList, err := helper.LoadDirectory(selectedPath, explorer.context.ShowHiddenFiles, false, explorer.markedFiles)
 	if err != nil {
 		return err
 	}
 
 	if newSelectedList == nil {
-		fe.selectedList, err = helper.LoadFilePreview(selectedPath)
+		explorer.selectedList, err = helper.LoadFilePreview(selectedPath)
 		if err != nil {
 			return err
 		}
 	} else {
 		newSelectedList.SetCurrentItem(selectedDirectoryIndex)
-		fe.selectedList = newSelectedList
+		explorer.selectedList = newSelectedList
 	}
 	return nil
 }
 
-func (fe *FileExplorer) setParentDirectory(path string) error {
+func (explorer *Explorer) setParentDirectory(path string) error {
 	currentAbsolutePath, _ := filepath.Abs(path)
 	if currentAbsolutePath == "/" {
 		emptyList := tview.NewList().ShowSecondaryText(false)
-		fe.parentList = emptyList
+		explorer.parentList = emptyList
 	} else {
 		parentPath := filepath.Join(currentAbsolutePath, "..")
-		newParentList, err := helper.LoadDirectory(parentPath, fe.context.ShowHiddenFiles, false, fe.markedFiles)
+		newParentList, err := helper.LoadDirectory(parentPath, explorer.context.ShowHiddenFiles, false, explorer.markedFiles)
 		if err != nil {
 			return err
 		}
@@ -230,131 +230,131 @@ func (fe *FileExplorer) setParentDirectory(path string) error {
 		parentDirectoryIndex := helper.FindExactItem(newParentList, filepath.Base(currentAbsolutePath))
 
 		parentAbsolutePath, _ := filepath.Abs(parentPath)
-		fe.directoryToIndexMap[parentAbsolutePath] = parentDirectoryIndex
+		explorer.directoryToIndexMap[parentAbsolutePath] = parentDirectoryIndex
 		newParentList.SetCurrentItem(parentDirectoryIndex)
-		fe.parentList = newParentList
+		explorer.parentList = newParentList
 	}
 	return nil
 }
 
 // setCurrentDirectory changes the current directory and updates related views
-func (fe *FileExplorer) setCurrentDirectory(path string) error {
+func (explorer *Explorer) setCurrentDirectory(path string) error {
 	isDirEmpty, _ := helper.IsDirectoryEmpty(path)
 	if isDirEmpty {
-		if fe.context.CurrentPath == path {
-			fe.setCurrentDirectory(path + "/..")
+		if explorer.context.CurrentPath == path {
+			explorer.setCurrentDirectory(path + "/..")
 		}
 		return nil
 	}
 
 	// Update current directory
 	currentAbsolutePath, _ := filepath.Abs(path)
-	currentDirectoryIndex := fe.directoryToIndexMap[currentAbsolutePath]
-	newCurrentList, err := helper.LoadDirectory(currentAbsolutePath, fe.context.ShowHiddenFiles, false, fe.markedFiles)
+	currentDirectoryIndex := explorer.directoryToIndexMap[currentAbsolutePath]
+	newCurrentList, err := helper.LoadDirectory(currentAbsolutePath, explorer.context.ShowHiddenFiles, false, explorer.markedFiles)
 	if err != nil {
 		return err
 	}
 
-	newCurrentList.SetInputCapture(fe.currentList.GetInputCapture())
+	newCurrentList.SetInputCapture(explorer.currentList.GetInputCapture())
 	newCurrentList.SetCurrentItem(currentDirectoryIndex)
 	currentDirectoryIndex = newCurrentList.GetCurrentItem()
 	// update index in case it was clipped
-	fe.currentList = newCurrentList
+	explorer.currentList = newCurrentList
 
 	// Update parent directory
-	fe.setParentDirectory(currentAbsolutePath)
+	explorer.setParentDirectory(currentAbsolutePath)
 
 	// Update selected directory
-	_, selectedName := fe.currentList.GetItemText(currentDirectoryIndex)
+	_, selectedName := explorer.currentList.GetItemText(currentDirectoryIndex)
 	selectedPath := filepath.Join(currentAbsolutePath, selectedName)
-	if err := fe.setSelectedDirectory(selectedPath); err != nil {
+	if err := explorer.setSelectedDirectory(selectedPath); err != nil {
 		return err
 	}
 
 	// Update header
-	fe.setHeader(currentAbsolutePath)
+	explorer.setHeader(currentAbsolutePath)
 
-	fe.searchInCurrentDirectory()
-	fe.context.CurrentPath = currentAbsolutePath
-	fe.currentFocusedWidget = fe.currentList
+	explorer.searchInCurrentDirectory()
+	explorer.context.CurrentPath = currentAbsolutePath
+	explorer.currentFocusedWidget = explorer.currentList
 	return nil
 }
 
-func (fe *FileExplorer) setHeader(text string) {
-	fe.header.SetBorder(true).SetTitle("Explore").Blur()
-	fe.header.SetText(text)
+func (explorer *Explorer) setHeader(text string) {
+	explorer.header.SetBorder(true).SetTitle("Explore").Blur()
+	explorer.header.SetText(text)
 }
 
 // setCurrentLine updates the current line selection
-func (fe *FileExplorer) setCurrentLine(lineIndex int) error {
+func (explorer *Explorer) setCurrentLine(lineIndex int) error {
 	if lineIndex < 0 {
 		lineIndex = 0
 	}
-	if lineIndex >= fe.currentList.GetItemCount() {
-		lineIndex = fe.currentList.GetItemCount() - 1
+	if lineIndex >= explorer.currentList.GetItemCount() {
+		lineIndex = explorer.currentList.GetItemCount() - 1
 	}
-	fe.currentList.SetCurrentItem(lineIndex)
-	currentAbsolutePath, _ := filepath.Abs(fe.context.CurrentPath)
-	fe.directoryToIndexMap[currentAbsolutePath] = lineIndex
+	explorer.currentList.SetCurrentItem(lineIndex)
+	currentAbsolutePath, _ := filepath.Abs(explorer.context.CurrentPath)
+	explorer.directoryToIndexMap[currentAbsolutePath] = lineIndex
 
-	_, selectedName := fe.currentList.GetItemText(lineIndex)
-	return fe.setSelectedDirectory(filepath.Join(fe.context.CurrentPath, selectedName))
+	_, selectedName := explorer.currentList.GetItemText(lineIndex)
+	return explorer.setSelectedDirectory(filepath.Join(explorer.context.CurrentPath, selectedName))
 }
 
-func (fe *FileExplorer) searchInCurrentDirectory() {
-	if fe.currentSearchTerm == "" {
+func (explorer *Explorer) searchInCurrentDirectory() {
+	if explorer.currentSearchTerm == "" {
 		return
 	}
-	fe.currentSearchIndeces = fe.currentList.FindItems(fe.currentSearchTerm, "", false, true)
+	explorer.currentSearchIndeces = explorer.currentList.FindItems(explorer.currentSearchTerm, "", false, true)
 }
 
-func (fe *FileExplorer) runFooterCommand(inputText string) {
+func (explorer *Explorer) runFooterCommand(inputText string) {
 	switch inputText[0] {
 	case '/':
-		fe.currentSearchTerm = inputText[1:]
-		fe.searchInCurrentDirectory()
-		if len(fe.currentSearchIndeces) > 0 {
-			fe.setCurrentLine(fe.currentSearchIndeces[0])
+		explorer.currentSearchTerm = inputText[1:]
+		explorer.searchInCurrentDirectory()
+		if len(explorer.currentSearchIndeces) > 0 {
+			explorer.setCurrentLine(explorer.currentSearchIndeces[0])
 		}
 	case ':':
 		command := inputText[1:]
 		parts := strings.Split(command, " ")
 		switch parts[0] {
 		case "q":
-			fe.context.App.Stop()
+			explorer.context.App.Stop()
 		case "mkdir":
 			if len(parts) > 1 {
-				helper.CreateDirectory(filepath.Join(fe.context.CurrentPath, parts[1]))
-				fe.setCurrentDirectory(fe.context.CurrentPath)
+				helper.CreateDirectory(filepath.Join(explorer.context.CurrentPath, parts[1]))
+				explorer.setCurrentDirectory(explorer.context.CurrentPath)
 			}
 		case "rename":
 			if len(parts) > 1 {
-				_, currentName := fe.currentList.GetItemText(fe.currentList.GetCurrentItem())
-				currentPath := filepath.Join(fe.context.CurrentPath, currentName)
-				newPath := filepath.Join(fe.context.CurrentPath, parts[1])
+				_, currentName := explorer.currentList.GetItemText(explorer.currentList.GetCurrentItem())
+				currentPath := filepath.Join(explorer.context.CurrentPath, currentName)
+				newPath := filepath.Join(explorer.context.CurrentPath, parts[1])
 				helper.RenameFile(currentPath, newPath)
-				fe.setCurrentDirectory(fe.context.CurrentPath)
+				explorer.setCurrentDirectory(explorer.context.CurrentPath)
 			}
 		case "mrename":
-			fe.renameMarkedFiles()
+			explorer.renameMarkedFiles()
 		case "touch":
 			if len(parts) > 1 {
-				helper.TouchFile(filepath.Join(fe.context.CurrentPath, parts[1]))
-				fe.setCurrentDirectory(fe.context.CurrentPath)
+				helper.TouchFile(filepath.Join(explorer.context.CurrentPath, parts[1]))
+				explorer.setCurrentDirectory(explorer.context.CurrentPath)
 			}
 		}
 	}
-	fe.currentFocusedWidget = fe.currentList
+	explorer.currentFocusedWidget = explorer.currentList
 }
 
-func (fe *FileExplorer) handleFooterInput(prompt string) {
-	fe.isFooterActive = true
-	fe.footer = tview.NewInputField().SetText(prompt)
-	fe.footer.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+func (explorer *Explorer) handleFooterInput(prompt string) {
+	explorer.isFooterActive = true
+	explorer.footer = tview.NewInputField().SetText(prompt)
+	explorer.footer.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		return event
 	})
-	fe.footer.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		currentText := fe.footer.GetText()
+	explorer.footer.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		currentText := explorer.footer.GetText()
 		if event.Key() == tcell.KeyBackspace2 {
 			currentTextLen := len(currentText)
 			if currentTextLen <= 1 {
@@ -366,50 +366,50 @@ func (fe *FileExplorer) handleFooterInput(prompt string) {
 		} else {
 			currentText = currentText + string(event.Rune())
 		}
-		fe.footer.SetText(currentText)
+		explorer.footer.SetText(currentText)
 		return nil
 	})
-	fe.footer.SetDoneFunc(
+	explorer.footer.SetDoneFunc(
 		func(key tcell.Key) {
 			if key == tcell.KeyEnter {
-				inputText := fe.footer.GetText()
-				fe.runFooterCommand(inputText)
-				fe.currentFocusedWidget = fe.currentList
+				inputText := explorer.footer.GetText()
+				explorer.runFooterCommand(inputText)
+				explorer.currentFocusedWidget = explorer.currentList
 			}
-			fe.Draw()
-			fe.isFooterActive = false
+			explorer.Draw()
+			explorer.isFooterActive = false
 		},
 	)
-	fe.footer.SetChangedFunc(
+	explorer.footer.SetChangedFunc(
 		func(text string) {
-			defer fe.Draw()
-			fe.searchInput = strings.TrimPrefix(text, "/")
+			defer explorer.Draw()
+			explorer.searchInput = strings.TrimPrefix(text, "/")
 		},
 	)
-	fe.currentFocusedWidget = fe.footer
-	fe.Draw()
+	explorer.currentFocusedWidget = explorer.footer
+	explorer.Draw()
 }
 
-func (fe *FileExplorer) setLastDirectory() error {
+func (explorer *Explorer) setLastDirectory() error {
 	// Write current path to a temporary file that can be sourced by shell
 	tempFile := os.Getenv("HOME") + "/.gofileyourself_lastdir"
-	if err := os.WriteFile(tempFile, []byte(fe.context.CurrentPath), 0o644); err != nil {
+	if err := os.WriteFile(tempFile, []byte(explorer.context.CurrentPath), 0o644); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (fe *FileExplorer) quitAndChangeDirectory() {
-	err := fe.setLastDirectory()
+func (explorer *Explorer) quitAndChangeDirectory() {
+	err := explorer.setLastDirectory()
 	if err != nil {
 		return
 	}
-	fe.context.App.Stop()
+	explorer.context.App.Stop()
 }
 
-func (fe *FileExplorer) deleteCurrentFile(isForcedDelete bool) {
-	_, currentName := fe.currentList.GetItemText(fe.currentList.GetCurrentItem())
-	currentPath := filepath.Join(fe.context.CurrentPath, currentName)
+func (explorer *Explorer) deleteCurrentFile(isForcedDelete bool) {
+	_, currentName := explorer.currentList.GetItemText(explorer.currentList.GetCurrentItem())
+	currentPath := filepath.Join(explorer.context.CurrentPath, currentName)
 	if isForcedDelete {
 		if err := os.RemoveAll(currentPath); err != nil {
 			return
@@ -419,26 +419,26 @@ func (fe *FileExplorer) deleteCurrentFile(isForcedDelete bool) {
 			return
 		}
 	}
-	fe.setCurrentDirectory(fe.context.CurrentPath)
+	explorer.setCurrentDirectory(explorer.context.CurrentPath)
 }
 
-func (fe *FileExplorer) yankCurrentFile() {
-	_, currentName := fe.currentList.GetItemText(fe.currentList.GetCurrentItem())
-	fe.yankedFile = fe.context.CurrentPath + "/" + currentName
+func (explorer *Explorer) yankCurrentFile() {
+	_, currentName := explorer.currentList.GetItemText(explorer.currentList.GetCurrentItem())
+	explorer.yankedFile = explorer.context.CurrentPath + "/" + currentName
 }
 
-func (fe *FileExplorer) pasteYankedFile() {
-	if fe.yankedFile == "" {
+func (explorer *Explorer) pasteYankedFile() {
+	if explorer.yankedFile == "" {
 		return
 	}
-	destinationPath := filepath.Join(fe.context.CurrentPath, filepath.Base(fe.yankedFile))
-	if err := helper.CopyFile(fe.yankedFile, destinationPath); err != nil {
+	destinationPath := filepath.Join(explorer.context.CurrentPath, filepath.Base(explorer.yankedFile))
+	if err := helper.CopyFile(explorer.yankedFile, destinationPath); err != nil {
 		return
 	}
-	fe.setCurrentDirectory(fe.context.CurrentPath)
+	explorer.setCurrentDirectory(explorer.context.CurrentPath)
 }
 
-func (fe *FileExplorer) renameMarkedFiles() {
+func (explorer *Explorer) renameMarkedFiles() {
 	tempFile, err := os.CreateTemp("", "gofileyourself_rm")
 	if err != nil {
 		return
@@ -446,13 +446,13 @@ func (fe *FileExplorer) renameMarkedFiles() {
 	defer tempFile.Close()
 	defer os.Remove(tempFile.Name())
 
-	if len(fe.markedFiles) == 0 {
+	if len(explorer.markedFiles) == 0 {
 		return
 	}
-	for _, file := range fe.markedFiles {
+	for _, file := range explorer.markedFiles {
 		fmt.Fprintln(tempFile, filepath.Base(file))
 	}
-	helper.OpenInNvim(tempFile.Name(), fe.context.ChooseFilePath, fe.context.App, fe.context.Config.HistoryLen)
+	helper.OpenInNvim(tempFile.Name(), explorer.context.ChooseFilePath, explorer.context.App, explorer.context.Config.HistoryLen)
 
 	file, err := os.Open(tempFile.Name())
 	if err != nil {
@@ -463,8 +463,8 @@ func (fe *FileExplorer) renameMarkedFiles() {
 	for {
 		line, _, err := fileReader.ReadLine()
 		if len(line) > 0 {
-			if lineIdx <= len(fe.markedFiles) {
-				path := fe.markedFiles[lineIdx]
+			if lineIdx <= len(explorer.markedFiles) {
+				path := explorer.markedFiles[lineIdx]
 				helper.RenameFile(path, string(filepath.Join(filepath.Dir(path), string(line))))
 			}
 			lineIdx++
@@ -473,13 +473,13 @@ func (fe *FileExplorer) renameMarkedFiles() {
 			break
 		}
 	}
-	fe.markedFiles = []string{}
-	fe.setCurrentDirectory(fe.context.CurrentPath)
+	explorer.markedFiles = []string{}
+	explorer.setCurrentDirectory(explorer.context.CurrentPath)
 }
 
-func (fe *FileExplorer) deleteMarkedFiles(isForcedDelete bool) {
+func (explorer *Explorer) deleteMarkedFiles(isForcedDelete bool) {
 	filesToRemove := []string{}
-	for _, file := range fe.markedFiles {
+	for _, file := range explorer.markedFiles {
 		if isForcedDelete {
 			if err := os.RemoveAll(file); err != nil {
 				return
@@ -495,49 +495,49 @@ func (fe *FileExplorer) deleteMarkedFiles(isForcedDelete bool) {
 		}
 	}
 	for _, file := range filesToRemove {
-		fe.markedFiles = helper.DeleteItem(fe.markedFiles, file)
+		explorer.markedFiles = helper.DeleteItem(explorer.markedFiles, file)
 	}
-	fe.setCurrentDirectory(fe.context.CurrentPath)
+	explorer.setCurrentDirectory(explorer.context.CurrentPath)
 }
 
-func (fe *FileExplorer) toggleMarkForCurrentFile() {
-	_, currentName := fe.currentList.GetItemText(fe.currentList.GetCurrentItem())
-	filePath := filepath.Join(fe.context.CurrentPath, currentName)
-	if slices.Contains(fe.markedFiles, filePath) {
-		fe.markedFiles = helper.DeleteItem(fe.markedFiles, filePath)
+func (explorer *Explorer) toggleMarkForCurrentFile() {
+	_, currentName := explorer.currentList.GetItemText(explorer.currentList.GetCurrentItem())
+	filePath := filepath.Join(explorer.context.CurrentPath, currentName)
+	if slices.Contains(explorer.markedFiles, filePath) {
+		explorer.markedFiles = helper.DeleteItem(explorer.markedFiles, filePath)
 	} else {
-		fe.markedFiles = append(fe.markedFiles, filePath)
+		explorer.markedFiles = append(explorer.markedFiles, filePath)
 	}
-	fe.setCurrentDirectory(fe.context.CurrentPath)
-	fe.setCurrentLine(fe.currentList.GetCurrentItem() + 1)
+	explorer.setCurrentDirectory(explorer.context.CurrentPath)
+	explorer.setCurrentLine(explorer.currentList.GetCurrentItem() + 1)
 }
 
-func (fe *FileExplorer) unmarkAllFiles() {
-	fe.markedFiles = []string{}
-	fe.setCurrentDirectory(fe.context.CurrentPath)
+func (explorer *Explorer) unmarkAllFiles() {
+	explorer.markedFiles = []string{}
+	explorer.setCurrentDirectory(explorer.context.CurrentPath)
 }
 
-func (fe *FileExplorer) yankMarkedFiles() {
-	fe.yankedMarkedFiles = fe.markedFiles
+func (explorer *Explorer) yankMarkedFiles() {
+	explorer.yankedMarkedFiles = explorer.markedFiles
 }
 
-func (fe *FileExplorer) pasteMarkedFiles() {
-	for _, file := range fe.yankedMarkedFiles {
-		destinationPath := filepath.Join(fe.context.CurrentPath, filepath.Base(file))
+func (explorer *Explorer) pasteMarkedFiles() {
+	for _, file := range explorer.yankedMarkedFiles {
+		destinationPath := filepath.Join(explorer.context.CurrentPath, filepath.Base(file))
 		helper.CopyFile(file, destinationPath)
 	}
-	fe.setCurrentDirectory(fe.context.CurrentPath)
+	explorer.setCurrentDirectory(explorer.context.CurrentPath)
 }
 
-func (fe *FileExplorer) setAnchor(key string) {
-	_, currentName := fe.currentList.GetItemText(fe.currentList.GetCurrentItem())
-	anchor := key + " > " + fe.context.CurrentPath + "/" + currentName
+func (explorer *Explorer) setAnchor(key string) {
+	_, currentName := explorer.currentList.GetItemText(explorer.currentList.GetCurrentItem())
+	anchor := key + " > " + explorer.context.CurrentPath + "/" + currentName
 	homeDir, _ := os.UserHomeDir()
 	anchorFilePath := homeDir + "/.gofileyourself_anchors"
 	helper.AppendOrReplaceLineInFile(anchorFilePath, anchor)
 }
 
-func (fe *FileExplorer) jumpToAnchor(key string) {
+func (explorer *Explorer) jumpToAnchor(key string) {
 	homeDir, _ := os.UserHomeDir()
 	anchor := homeDir + "/.gofileyourself_anchors"
 	anchor, err := helper.GetLineWithKey(anchor, key)
@@ -548,219 +548,219 @@ func (fe *FileExplorer) jumpToAnchor(key string) {
 	anchorPath := strings.TrimPrefix(anchor, anchorPrefix)
 	anchorBase := filepath.Base(anchorPath)
 	anchorDir := filepath.Dir(anchorPath)
-	fe.setCurrentDirectory(anchorDir)
-	fe.setCurrentLine(helper.FindExactItem(fe.currentList, anchorBase))
+	explorer.setCurrentDirectory(anchorDir)
+	explorer.setCurrentLine(helper.FindExactItem(explorer.currentList, anchorBase))
 }
 
-func (fe *FileExplorer) cycleRecent(isBackward bool) {
+func (explorer *Explorer) cycleRecent(isBackward bool) {
 	if isBackward {
-		fe.cycleRecentPosition--
+		explorer.cycleRecentPosition--
 	} else {
-		fe.cycleRecentPosition++
+		explorer.cycleRecentPosition++
 	}
-	if fe.cycleRecentPosition < 0 {
-		fe.cycleRecentPosition = 0
+	if explorer.cycleRecentPosition < 0 {
+		explorer.cycleRecentPosition = 0
 	}
-	recentFile, err := helper.GetRecentFile(fe.cycleRecentPosition, fe.context.Config.HistoryLen)
+	recentFile, err := helper.GetRecentFile(explorer.cycleRecentPosition, explorer.context.Config.HistoryLen)
 	if err != nil {
 		if isBackward {
-			fe.cycleRecentPosition = 0
+			explorer.cycleRecentPosition = 0
 		} else {
-			fe.cycleRecentPosition--
+			explorer.cycleRecentPosition--
 		}
 		return
 	}
-	fe.setCurrentDirectory(filepath.Dir(recentFile))
-	fe.setCurrentLine(helper.FindExactItem(fe.currentList, filepath.Base(recentFile)))
+	explorer.setCurrentDirectory(filepath.Dir(recentFile))
+	explorer.setCurrentLine(helper.FindExactItem(explorer.currentList, filepath.Base(recentFile)))
 }
 
 // setupKeyBindings configures keyboard input handling
-func (fe *FileExplorer) SetupKeyBindings() {
-	fe.currentList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		defer fe.Draw()
+func (explorer *Explorer) SetupKeyBindings() {
+	explorer.currentList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		defer explorer.Draw()
 		switch event.Key() {
 		case tcell.KeyCtrlH:
-			fe.context.ShowHiddenFiles = !fe.context.ShowHiddenFiles
+			explorer.context.ShowHiddenFiles = !explorer.context.ShowHiddenFiles
 
 			// Remember current selection before refresh
-			_, currentName := fe.currentList.GetItemText(fe.currentList.GetCurrentItem())
+			_, currentName := explorer.currentList.GetItemText(explorer.currentList.GetCurrentItem())
 
 			// Remember selected directory name if we're showing a directory
 			var selectedName string
-			if list, ok := fe.selectedList.(*tview.List); ok {
+			if list, ok := explorer.selectedList.(*tview.List); ok {
 				_, selectedName = list.GetItemText(list.GetCurrentItem())
 			}
 
 			// Refresh the view
-			if err := fe.setCurrentDirectory(fe.context.CurrentPath); err != nil {
+			if err := explorer.setCurrentDirectory(explorer.context.CurrentPath); err != nil {
 				return event
 			}
 
 			// Restore current selection
-			if idx := helper.FindExactItem(fe.currentList, currentName); idx >= 0 {
-				fe.setCurrentLine(idx)
+			if idx := helper.FindExactItem(explorer.currentList, currentName); idx >= 0 {
+				explorer.setCurrentLine(idx)
 			}
 
 			// Restore selected directory selection if applicable
-			if list, ok := fe.selectedList.(*tview.List); ok {
+			if list, ok := explorer.selectedList.(*tview.List); ok {
 				if idx := helper.FindExactItem(list, selectedName); idx >= 0 {
 					list.SetCurrentItem(idx)
-					absoluteSelectedPath, _ := filepath.Abs(filepath.Join(fe.context.CurrentPath, currentName))
-					fe.directoryToIndexMap[absoluteSelectedPath] = idx
+					absoluteSelectedPath, _ := filepath.Abs(filepath.Join(explorer.context.CurrentPath, currentName))
+					explorer.directoryToIndexMap[absoluteSelectedPath] = idx
 				}
 			}
 			return nil
 		case tcell.KeyCtrlD: // scroll 10 down
-			scrollAmount := fe.currentList.GetItemCount() / 2
+			scrollAmount := explorer.currentList.GetItemCount() / 2
 			if scrollAmount > MAX_SCROLL_AMOUNT {
 				scrollAmount = MAX_SCROLL_AMOUNT
 			}
-			fe.setCurrentLine(fe.currentList.GetCurrentItem() + scrollAmount)
+			explorer.setCurrentLine(explorer.currentList.GetCurrentItem() + scrollAmount)
 			return nil
 		case tcell.KeyCtrlU: // scroll 10 up
-			scrollAmount := fe.currentList.GetItemCount() / 2
+			scrollAmount := explorer.currentList.GetItemCount() / 2
 			if scrollAmount > MAX_SCROLL_AMOUNT {
 				scrollAmount = MAX_SCROLL_AMOUNT
 			}
-			fe.setCurrentLine(fe.currentList.GetCurrentItem() - scrollAmount)
+			explorer.setCurrentLine(explorer.currentList.GetCurrentItem() - scrollAmount)
 			return nil
 		}
 		rune := event.Rune()
-		fe.keyBuffer += string(rune)
-		if len(fe.keyBuffer) > 5 {
-			fe.keyBuffer = fe.keyBuffer[4:]
+		explorer.keyBuffer += string(rune)
+		if len(explorer.keyBuffer) > 5 {
+			explorer.keyBuffer = explorer.keyBuffer[4:]
 		}
-		if strings.HasSuffix(fe.keyBuffer, "gg") {
-			fe.keyBuffer = ""
-			fe.setCurrentLine(0)
+		if strings.HasSuffix(explorer.keyBuffer, "gg") {
+			explorer.keyBuffer = ""
+			explorer.setCurrentLine(0)
 			return nil
-		} else if strings.HasSuffix(fe.keyBuffer, "dd") {
-			fe.keyBuffer = ""
-			fe.deleteCurrentFile(false)
+		} else if strings.HasSuffix(explorer.keyBuffer, "dd") {
+			explorer.keyBuffer = ""
+			explorer.deleteCurrentFile(false)
 			return nil
-		} else if strings.HasSuffix(fe.keyBuffer, "DD") {
-			fe.keyBuffer = ""
-			fe.deleteCurrentFile(true)
+		} else if strings.HasSuffix(explorer.keyBuffer, "DD") {
+			explorer.keyBuffer = ""
+			explorer.deleteCurrentFile(true)
 			return nil
-		} else if strings.HasSuffix(fe.keyBuffer, "yy") {
-			fe.keyBuffer = ""
-			fe.yankCurrentFile()
+		} else if strings.HasSuffix(explorer.keyBuffer, "yy") {
+			explorer.keyBuffer = ""
+			explorer.yankCurrentFile()
 			return nil
-		} else if strings.HasSuffix(fe.keyBuffer, "pp") {
-			fe.keyBuffer = ""
-			fe.pasteYankedFile()
+		} else if strings.HasSuffix(explorer.keyBuffer, "pp") {
+			explorer.keyBuffer = ""
+			explorer.pasteYankedFile()
 			return nil
-		} else if strings.HasSuffix(fe.keyBuffer, "mm") {
-			fe.keyBuffer = ""
-			fe.toggleMarkForCurrentFile()
+		} else if strings.HasSuffix(explorer.keyBuffer, "mm") {
+			explorer.keyBuffer = ""
+			explorer.toggleMarkForCurrentFile()
 			return nil
-		} else if strings.HasSuffix(fe.keyBuffer, "mu") {
-			fe.keyBuffer = ""
-			fe.unmarkAllFiles()
+		} else if strings.HasSuffix(explorer.keyBuffer, "mu") {
+			explorer.keyBuffer = ""
+			explorer.unmarkAllFiles()
 			return nil
-		} else if strings.HasSuffix(fe.keyBuffer, "md") {
-			fe.keyBuffer = ""
-			fe.deleteMarkedFiles(false)
+		} else if strings.HasSuffix(explorer.keyBuffer, "md") {
+			explorer.keyBuffer = ""
+			explorer.deleteMarkedFiles(false)
 			return nil
-		} else if strings.HasSuffix(fe.keyBuffer, "mD") {
-			fe.keyBuffer = ""
-			fe.deleteMarkedFiles(true)
+		} else if strings.HasSuffix(explorer.keyBuffer, "mD") {
+			explorer.keyBuffer = ""
+			explorer.deleteMarkedFiles(true)
 			return nil
-		} else if strings.HasSuffix(fe.keyBuffer, "my") {
-			fe.keyBuffer = ""
-			fe.yankMarkedFiles()
+		} else if strings.HasSuffix(explorer.keyBuffer, "my") {
+			explorer.keyBuffer = ""
+			explorer.yankMarkedFiles()
 			return nil
-		} else if strings.HasSuffix(fe.keyBuffer, "mp") {
-			fe.keyBuffer = ""
-			fe.pasteMarkedFiles()
+		} else if strings.HasSuffix(explorer.keyBuffer, "mp") {
+			explorer.keyBuffer = ""
+			explorer.pasteMarkedFiles()
 			return nil
-		} else if match := regexp.MustCompile(`A([a-zA-Z0-9]+)$`).FindStringSubmatch(fe.keyBuffer); match != nil {
+		} else if match := regexp.MustCompile(`A([a-zA-Z0-9]+)$`).FindStringSubmatch(explorer.keyBuffer); match != nil {
 			key := match[1]
-			fe.keyBuffer = ""
-			fe.setAnchor(key)
+			explorer.keyBuffer = ""
+			explorer.setAnchor(key)
 			return nil
-		} else if match := regexp.MustCompile(`a([a-zA-Z0-9]+)$`).FindStringSubmatch(fe.keyBuffer); match != nil {
+		} else if match := regexp.MustCompile(`a([a-zA-Z0-9]+)$`).FindStringSubmatch(explorer.keyBuffer); match != nil {
 			key := match[1]
-			fe.keyBuffer = ""
-			fe.jumpToAnchor(key)
+			explorer.keyBuffer = ""
+			explorer.jumpToAnchor(key)
 			return nil
 		}
 		switch rune {
 		case 'r':
-			fe.cycleRecent(false)
+			explorer.cycleRecent(false)
 			return nil
 		case 'R':
-			fe.cycleRecent(true)
+			explorer.cycleRecent(true)
 			return nil
 		case 'M':
-			fe.toggleMarkForCurrentFile()
+			explorer.toggleMarkForCurrentFile()
 			return nil
 		case 'G':
-			fe.setCurrentLine(fe.currentList.GetItemCount() - 1)
+			explorer.setCurrentLine(explorer.currentList.GetItemCount() - 1)
 			return nil
 		case 'S':
-			fe.quitAndChangeDirectory()
+			explorer.quitAndChangeDirectory()
 			return nil
 		case 'j': // scroll down
-			fe.setCurrentLine(fe.currentList.GetCurrentItem() + 1)
+			explorer.setCurrentLine(explorer.currentList.GetCurrentItem() + 1)
 			return nil
 		case 'k': // scroll up
-			fe.setCurrentLine(fe.currentList.GetCurrentItem() - 1)
+			explorer.setCurrentLine(explorer.currentList.GetCurrentItem() - 1)
 			return nil
 		case 'q': // quit
-			fe.context.App.Stop()
+			explorer.context.App.Stop()
 			return nil
 		case 'l': // open dir or file
-			currentItem := fe.currentList.GetCurrentItem()
-			_, fileName := fe.currentList.GetItemText(currentItem)
-			filePath := filepath.Join(fe.context.CurrentPath, fileName)
+			currentItem := explorer.currentList.GetCurrentItem()
+			_, fileName := explorer.currentList.GetItemText(currentItem)
+			filePath := filepath.Join(explorer.context.CurrentPath, fileName)
 			fileInfo, err := os.Stat(filePath)
 			if err != nil {
 				return event
 			}
 			if fileInfo.IsDir() {
-				if err := fe.setCurrentDirectory(filePath); err != nil {
+				if err := explorer.setCurrentDirectory(filePath); err != nil {
 					return event
 				}
 			} else {
-				helper.OpenInNvim(filePath, fe.context.ChooseFilePath, fe.context.App, fe.context.Config.HistoryLen)
+				helper.OpenInNvim(filePath, explorer.context.ChooseFilePath, explorer.context.App, explorer.context.Config.HistoryLen)
 				return nil
 			}
 			return nil
 		case 'h': // go up directory
-			dirPath := filepath.Join(fe.context.CurrentPath, "..")
-			if err := fe.setCurrentDirectory(dirPath); err != nil {
+			dirPath := filepath.Join(explorer.context.CurrentPath, "..")
+			if err := explorer.setCurrentDirectory(dirPath); err != nil {
 				return event
 			}
 			return nil
 		case '/': // search
-			fe.handleFooterInput("/")
+			explorer.handleFooterInput("/")
 			return nil
 		case ':': // command
-			fe.handleFooterInput(":")
+			explorer.handleFooterInput(":")
 			return nil
 		case 'n': // cycle search
-			if len(fe.currentSearchIndeces) > 0 {
-				currentIndex := fe.currentList.GetCurrentItem()
-				for _, index := range fe.currentSearchIndeces {
+			if len(explorer.currentSearchIndeces) > 0 {
+				currentIndex := explorer.currentList.GetCurrentItem()
+				for _, index := range explorer.currentSearchIndeces {
 					if index > currentIndex {
-						fe.setCurrentLine(index)
+						explorer.setCurrentLine(index)
 						return nil
 					}
 				}
-				fe.setCurrentLine(fe.currentSearchIndeces[0])
+				explorer.setCurrentLine(explorer.currentSearchIndeces[0])
 			}
 		case 'N': // cycle search backwards
-			if len(fe.currentSearchIndeces) > 0 {
-				currentIndex := fe.currentList.GetCurrentItem()
-				for i := len(fe.currentSearchIndeces) - 1; i >= 0; i-- {
-					if fe.currentSearchIndeces[i] < currentIndex {
-						fe.setCurrentLine(fe.currentSearchIndeces[i])
+			if len(explorer.currentSearchIndeces) > 0 {
+				currentIndex := explorer.currentList.GetCurrentItem()
+				for i := len(explorer.currentSearchIndeces) - 1; i >= 0; i-- {
+					if explorer.currentSearchIndeces[i] < currentIndex {
+						explorer.setCurrentLine(explorer.currentSearchIndeces[i])
 						return nil
 					}
 				}
 				// If no smaller index found, wrap around to the last item
-				fe.setCurrentLine(fe.currentSearchIndeces[len(fe.currentSearchIndeces)-1])
+				explorer.setCurrentLine(explorer.currentSearchIndeces[len(explorer.currentSearchIndeces)-1])
 			}
 
 			return nil
@@ -770,11 +770,11 @@ func (fe *FileExplorer) SetupKeyBindings() {
 }
 
 // Run starts the file explorer
-func (fe *FileExplorer) Run() error {
-	return fe.context.App.SetRoot(fe.Root(), true).Run()
+func (explorer *Explorer) Run() error {
+	return explorer.context.App.SetRoot(explorer.Root(), true).Run()
 }
 
 // GetCurrentList returns the current list widget
-func (fe *FileExplorer) GetCurrentList() *tview.List {
-	return fe.currentList
+func (explorer *Explorer) GetCurrentList() *tview.List {
+	return explorer.currentList
 }

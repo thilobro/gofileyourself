@@ -7,5 +7,5 @@ import (
 type Factory struct{}
 
 func (f *Factory) New(ctx *widget.Context) (widget.WidgetInterface, error) {
-	return NewFileExplorer(ctx)
+	return NewExplorer(ctx)
 }

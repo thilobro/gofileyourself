@@ -26,6 +26,7 @@ type Finder struct {
 	searchTerm           string
 	fuzzySearchQuit      chan bool
 	listUpdateChan       chan *tview.List // Channel for list updates
+	title                string
 }
 
 func NewFinder(context *widget.Context) (*Finder, error) {
@@ -38,6 +39,7 @@ func NewFinder(context *widget.Context) (*Finder, error) {
 		searchTerm:      "",
 		fuzzySearchQuit: make(chan bool),
 		listUpdateChan:  make(chan *tview.List, 10), // Buffered channel
+		title:           "Find",
 	}
 	finder.resetFileList()
 	finder.searchedList = finder.fileList
@@ -338,7 +340,7 @@ func (finder *Finder) applyTheme() {
 			SetFieldBackgroundColor(theme.Bg1).
 			SetFieldTextColor(theme.Fg0).
 			SetBackgroundColor(theme.Bg0).
-			SetBorder(true).Blur()
+			SetBorder(true).SetTitle(finder.title).Blur()
 	}
 }
 
@@ -348,6 +350,7 @@ func (finder *Finder) GetInputCapture() func(*tcell.EventKey) *tcell.EventKey {
 }
 
 func (finder *Finder) showRecentHistory() {
+	finder.title = "Find Recent"
 	finder.fileList.Clear()
 	historyPath := filepath.Join(os.Getenv("HOME"), ".gofileyourselfhistory")
 	historyFile, err := os.Open(historyPath)
