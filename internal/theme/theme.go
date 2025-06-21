@@ -1,11 +1,16 @@
 package theme
 
 import (
+	"log"
+	"os"
+
 	"github.com/alecthomas/chroma"
 	"github.com/gdamore/tcell/v2"
+	"github.com/thilobro/gofileyourself/internal/formatter"
+	"gopkg.in/yaml.v3"
 )
 
-type ExplorerTheme struct {
+type Theme struct {
 	Bg0    tcell.Color
 	Bg1    tcell.Color
 	Fg0    tcell.Color
@@ -21,8 +26,36 @@ type ExplorerTheme struct {
 	Black  tcell.Color
 }
 
-func GetExplorerTheme() *ExplorerTheme {
-	return &ExplorerTheme{
+func NewTheme(themePath *string) *Theme {
+	var theme *Theme
+	var err error
+	if themePath != nil {
+		theme, err = GetThemeFromPath(themePath)
+		if err != nil {
+			theme = GetDefaultTheme()
+		}
+	} else {
+		theme = GetDefaultTheme()
+	}
+	formatter.RegisterCustomFormatter(GetDefaultFormatterStyle())
+	return theme
+}
+
+func GetThemeFromPath(themePath *string) (*Theme, error) {
+	themeFile, err := os.ReadFile(*themePath)
+	if err != nil {
+		return nil, err
+	}
+	var theme Theme
+	if err := yaml.Unmarshal(themeFile, &theme); err != nil {
+		log.Fatal(err)
+		panic(err)
+	}
+	return &theme, nil
+}
+
+func GetDefaultTheme() *Theme {
+	return &Theme{
 		Bg0:    tcell.NewRGBColor(40, 40, 40),    // #282828
 		Bg1:    tcell.NewRGBColor(60, 56, 54),    // #3c3836
 		Fg0:    tcell.NewRGBColor(251, 241, 199), // #fbf1c7
@@ -39,7 +72,7 @@ func GetExplorerTheme() *ExplorerTheme {
 	}
 }
 
-func GetFormatterStyle() *chroma.Style {
+func GetDefaultFormatterStyle() *chroma.Style {
 	return chroma.MustNewStyle("gruvbox", chroma.StyleEntries{
 		chroma.Text:               "#ebdbb2",
 		chroma.Error:              "#fb4934",

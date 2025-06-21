@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/thilobro/gofileyourself/internal/config"
+	"github.com/thilobro/gofileyourself/internal/theme"
 	"github.com/thilobro/gofileyourself/internal/widget"
 
 	"github.com/gdamore/tcell/v2"
@@ -77,6 +78,7 @@ func NewDisplay(factories map[widget.Mode]widget.Factory, chooseFilePath *string
 		return nil, err
 	}
 	display := &Display{}
+	theme := theme.NewTheme(&config.ThemePath)
 
 	explorerFactory := factories[widget.Explorer]
 	context := &widget.Context{
@@ -87,6 +89,7 @@ func NewDisplay(factories map[widget.Mode]widget.Factory, chooseFilePath *string
 		ChooseFilePath:   chooseFilePath,
 		SelectedFilePath: selectedFilePath,
 		Config:           config,
+		Theme:            theme,
 	}
 	explorerWidget, err := explorerFactory.New(context)
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/thilobro/gofileyourself/internal/config"
+	"github.com/thilobro/gofileyourself/internal/theme"
 )
 
 type Mode int
@@ -22,6 +23,7 @@ type Context struct {
 	ChooseFilePath   *string
 	SelectedFilePath *string
 	Config           *config.Config
+	Theme            *theme.Theme
 }
 
 type WidgetInterface interface {

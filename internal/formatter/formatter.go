@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/thilobro/gofileyourself/internal/theme"
-
 	"github.com/alecthomas/chroma"
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/styles"
@@ -40,7 +38,7 @@ func chromaColorToTcell(c chroma.Colour) tcell.Color {
 }
 
 // Register the formatter
-func RegisterCustomFormatter() {
+func RegisterCustomFormatter(formatterStyle *chroma.Style) {
 	formatters.Register("tview", &TviewFormatter{})
-	styles.Register(theme.GetFormatterStyle())
+	styles.Register(formatterStyle)
 }
