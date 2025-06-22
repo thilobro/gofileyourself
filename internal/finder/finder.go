@@ -330,8 +330,8 @@ func (finder *Finder) applyTheme() {
 	// Style the lists
 	finder.searchedList.
 		SetMainTextColor(theme.Fg1).
-		SetSelectedTextColor(theme.Black).
-		SetSelectedBackgroundColor(theme.Aqua).
+		SetSelectedTextColor(theme.Palette8).
+		SetSelectedBackgroundColor(theme.Palette6).
 		SetBackgroundColor(theme.Bg0)
 
 	// Style the footer

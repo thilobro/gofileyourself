@@ -58,16 +58,16 @@ func (explorer *Explorer) applyTheme() {
 	// Style the lists
 	explorer.currentList.
 		SetMainTextColor(theme.Fg1).
-		SetSelectedTextColor(theme.Black).
-		SetSelectedBackgroundColor(theme.Aqua).
+		SetSelectedTextColor(theme.Palette8).
+		SetSelectedBackgroundColor(theme.Palette6).
 		SetBackgroundColor(theme.Bg0)
 
 	if explorer.parentList != nil {
 		if list, ok := explorer.parentList.(*tview.List); ok {
 			list.
 				SetMainTextColor(theme.Fg1).
-				SetSelectedTextColor(theme.Black).
-				SetSelectedBackgroundColor(theme.Blue).
+				SetSelectedTextColor(theme.Palette8).
+				SetSelectedBackgroundColor(theme.Palette4).
 				SetBackgroundColor(theme.Bg0)
 		}
 	}
@@ -76,8 +76,8 @@ func (explorer *Explorer) applyTheme() {
 	if list, ok := explorer.selectedList.(*tview.List); ok {
 		list.
 			SetMainTextColor(theme.Fg1).
-			SetSelectedTextColor(theme.Black).
-			SetSelectedBackgroundColor(theme.Green).
+			SetSelectedTextColor(theme.Palette8).
+			SetSelectedBackgroundColor(theme.Palette2).
 			SetBackgroundColor(theme.Bg0)
 	} else if textView, ok := explorer.selectedList.(*tview.TextView); ok {
 		textView.

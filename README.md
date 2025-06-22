@@ -81,6 +81,30 @@ Keys:
 - `Enter` - Open file
 - `Esc` - Go back to explorer
 
+### Config
+
+You can set a config file with `--config=<path>`. The default is `~/.gofindyourself.yaml`. If no config file is found, a default config used:
+```yaml
+history_len: 50
+theme_path: "{$HOME}/.gofileyourself_theme.yaml"
+```
+
+If no theme config is found, the default theme is used:
+```yaml
+bg0: "#282828"
+bg1: "#3c3836"
+fg0: "#fbf1c7"
+fg1: "#ebdbb2"
+palette0: "#928374"
+palette1: "#fb4934"
+palette2: "#b8bb26"
+palette3: "#fabd2f"
+palette4: "#83a598"
+palette5: "#d3869b"
+palette6: "#8ec07c"
+palette7: "#fe8019"
+palette8: "#000000"
+```
 
 ## Neovim Plugin
 
