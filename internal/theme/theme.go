@@ -43,7 +43,7 @@ type ThemeConfig struct {
 }
 
 func GetFormatterStyleForTheme(themeConfig *ThemeConfig) *chroma.Style {
-	return chroma.MustNewStyle("gruvbox", chroma.StyleEntries{
+	return chroma.MustNewStyle("gofileyourself", chroma.StyleEntries{
 		chroma.Text:               themeConfig.Fg1,
 		chroma.Error:              themeConfig.Palette1,
 		chroma.Comment:            themeConfig.Palette0,
