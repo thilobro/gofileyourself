@@ -102,7 +102,7 @@ func (explorer *Explorer) highlightSearchInput() {
 		displayNameWithoutHighlight := strings.Replace(displayName, startHighlightMarker, "", -1)
 		displayNameWithoutHighlight = strings.Replace(displayNameWithoutHighlight, endHighlightMarker, "", -1)
 		indeces := gostring.IndexAll(displayNameWithoutHighlight, explorer.searchInput, -1)
-		explorer.currentList.SetItemText(i, gostring.HighlightString(displayNameWithoutHighlight, indeces, "[red::b]", "[-::-]"), text)
+		explorer.currentList.SetItemText(i, gostring.HighlightString(displayNameWithoutHighlight, indeces, startHighlightMarker, endHighlightMarker), text)
 	}
 }
 
@@ -198,7 +198,7 @@ func (explorer *Explorer) setSelectedDirectory(selectedPath string) error {
 	}
 	selectedDirectoryIndex := explorer.directoryToIndexMap[selectedAbsolutePath]
 
-	newSelectedList, err := helper.LoadDirectory(selectedPath, explorer.context.ShowHiddenFiles, false, explorer.markedFiles)
+	newSelectedList, err := helper.LoadDirectory(selectedPath, explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func (explorer *Explorer) setParentDirectory(path string) error {
 		explorer.parentList = emptyList
 	} else {
 		parentPath := filepath.Join(currentAbsolutePath, "..")
-		newParentList, err := helper.LoadDirectory(parentPath, explorer.context.ShowHiddenFiles, false, explorer.markedFiles)
+		newParentList, err := helper.LoadDirectory(parentPath, explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
 		if err != nil {
 			return err
 		}
@@ -250,7 +250,7 @@ func (explorer *Explorer) setCurrentDirectory(path string) error {
 	// Update current directory
 	currentAbsolutePath, _ := filepath.Abs(path)
 	currentDirectoryIndex := explorer.directoryToIndexMap[currentAbsolutePath]
-	newCurrentList, err := helper.LoadDirectory(currentAbsolutePath, explorer.context.ShowHiddenFiles, false, explorer.markedFiles)
+	newCurrentList, err := helper.LoadDirectory(currentAbsolutePath, explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
 	if err != nil {
 		return err
 	}

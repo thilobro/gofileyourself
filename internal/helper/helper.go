@@ -53,7 +53,7 @@ func CopyFile(src string, dst string) error {
 }
 
 // LoadDirectory is a helper function that loads directory contents into a list
-func LoadDirectory(path string, showHiddenFiles bool, recursive bool, markedItems []string) (*tview.List, error) {
+func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursive bool, markedItems []string) (*tview.List, error) {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -108,6 +108,7 @@ func LoadDirectory(path string, showHiddenFiles bool, recursive bool, markedItem
 			}
 
 			displayName := relPath
+
 			if slices.Contains(markedItems, absPath) {
 				displayName = "m> " + displayName
 			}
@@ -122,6 +123,11 @@ func LoadDirectory(path string, showHiddenFiles bool, recursive bool, markedItem
 				}
 			} else if info.Mode()&0o111 != 0 {
 				displayName += "*"
+			}
+			if showContent && IsTextFile(absPath) {
+				content, _ := os.ReadFile(absPath)
+				displayName += " " + string(content)
+
 			}
 
 			list.AddItem(displayName, relPath, 0, nil)

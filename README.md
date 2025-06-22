@@ -39,6 +39,7 @@ Keys:
 - `Ctrl-C` - Quit
 - `Ctrl-F` - Open finder
 - `Ctrl-R` - Open finder for recently opened files
+- `Ctrl-G` - Open finder with full text search (experimental)
 
 ### Explorer
 

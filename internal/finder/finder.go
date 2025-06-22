@@ -41,8 +41,7 @@ func NewFinder(context *widget.Context) (*Finder, error) {
 		listUpdateChan:  make(chan *tview.List, 10), // Buffered channel
 		title:           "Find",
 	}
-	finder.resetFileList()
-	finder.searchedList = finder.fileList
+	finder.resetFileList(false)
 	finder.SetupKeyBindings()
 	finder.currentFocusedWidget = finder.searchedList
 
@@ -93,7 +92,7 @@ func (finder *Finder) setSelectedDirectory(selectedPath string) error {
 	}
 	selectedDirectoryIndex := 0
 
-	newSelectedList, err := helper.LoadDirectory(selectedPath, finder.context.ShowHiddenFiles, false, []string{})
+	newSelectedList, err := helper.LoadDirectory(selectedPath, finder.context.ShowHiddenFiles, false, false, []string{})
 	if err != nil {
 		return err
 	}
@@ -117,12 +116,15 @@ func (finder *Finder) SetupKeyBindings() {
 		case tcell.KeyCtrlR:
 			finder.showRecentHistory()
 			return nil
+		case tcell.KeyCtrlG:
+			finder.showGrep()
+			return nil
 		case tcell.KeyCtrlH:
 			finder.context.ShowHiddenFiles = !finder.context.ShowHiddenFiles
 
 			// Remember current selection before refresh
 			_, currentName := finder.searchedList.GetItemText(finder.searchedList.GetCurrentItem())
-			finder.resetFileList()
+			finder.resetFileList(false)
 			finder.searchedList = finder.fileList
 
 			// Restore current selection
@@ -214,10 +216,16 @@ func (finder *Finder) manageFuzzySearch(text string) {
 }
 
 func (finder *Finder) fuzzySearch(text string) {
-	itemNames := make([]string, finder.fileList.GetItemCount())
+	displayNames := make([]string, finder.fileList.GetItemCount())
+	texts := make([]string, finder.fileList.GetItemCount())
+	startHighlightMarker := "[red::b]"
+	endHighlightMarker := "[-::-]"
 	for i := 0; i < finder.fileList.GetItemCount(); i++ {
-		_, itemName := finder.fileList.GetItemText(i)
-		itemNames[i] = itemName
+		displayName, text := finder.fileList.GetItemText(i)
+		displayNameWithoutHighlight := strings.Replace(displayName, startHighlightMarker, "", -1)
+		displayNameWithoutHighlight = strings.Replace(displayNameWithoutHighlight, endHighlightMarker, "", -1)
+		displayNames[i] = displayName
+		texts[i] = text
 	}
 
 	// Split the search text into patterns
@@ -227,7 +235,7 @@ func (finder *Finder) fuzzySearch(text string) {
 	}
 
 	// Start with all matches from the first pattern
-	matches := fuzzy.Find(patterns[0], itemNames)
+	matches := fuzzy.Find(patterns[0], displayNames)
 	matchedStrs := make([]string, len(matches))
 	for i, match := range matches {
 		matchedStrs[i] = match.Str
@@ -257,12 +265,12 @@ func (finder *Finder) fuzzySearch(text string) {
 	for _, match := range matches {
 		for i := 0; i < len(match.Str); i++ {
 			if slices.Contains(allMatchedIndexes[match.Str], i) {
-				line = line + "[red::b]" + string(match.Str[i]) + "[-::-]"
+				line = line + startHighlightMarker + string(match.Str[i]) + endHighlightMarker
 			} else {
 				line = line + string(match.Str[i])
 			}
 		}
-		newList.AddItem(line, match.Str, 0, nil)
+		newList.AddItem(line, texts[match.Index], 0, nil)
 		line = ""
 	}
 
@@ -280,13 +288,14 @@ func (finder *Finder) fuzzySearch(text string) {
 	finder.searchTerm = text
 }
 
-func (finder *Finder) resetFileList() error {
+func (finder *Finder) resetFileList(showContent bool) error {
 	finder.fileList.Clear()
-	fileList, err := helper.LoadDirectory(finder.context.CurrentPath, finder.context.ShowHiddenFiles, true, []string{})
+	fileList, err := helper.LoadDirectory(finder.context.CurrentPath, finder.context.ShowHiddenFiles, showContent, true, []string{})
 	if err != nil {
 		return err
 	}
 	finder.fileList = fileList
+	finder.searchedList = finder.fileList
 	return nil
 }
 
@@ -363,6 +372,14 @@ func (finder *Finder) showRecentHistory() {
 		line := scanner.Text()
 		finder.fileList.InsertItem(0, line, line, 0, nil)
 	}
+	finder.searchedList = finder.fileList
+	finder.searchInDirectory()
+}
+
+func (finder *Finder) showGrep() {
+	finder.title = "Grep"
+	finder.fileList.Clear()
+	finder.resetFileList(true)
 	finder.searchedList = finder.fileList
 	finder.searchInDirectory()
 }
