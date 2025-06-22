@@ -179,7 +179,7 @@ func LoadFilePreview(path string) (*tview.TextView, error) {
 			lexer = lexers.Fallback
 		}
 
-		style := styles.Get("gruvbox")
+		style := styles.Get("gofileyourself")
 		if style == nil {
 			style = styles.Fallback
 		}
