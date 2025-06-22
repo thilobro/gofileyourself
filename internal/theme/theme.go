@@ -11,91 +11,122 @@ import (
 )
 
 type Theme struct {
-	Bg0    tcell.Color
-	Bg1    tcell.Color
-	Fg0    tcell.Color
-	Fg1    tcell.Color
-	Gray   tcell.Color
-	Red    tcell.Color
-	Green  tcell.Color
-	Yellow tcell.Color
-	Blue   tcell.Color
-	Purple tcell.Color
-	Aqua   tcell.Color
-	Orange tcell.Color
-	Black  tcell.Color
+	Bg0      tcell.Color
+	Bg1      tcell.Color
+	Fg0      tcell.Color
+	Fg1      tcell.Color
+	Palette0 tcell.Color
+	Palette1 tcell.Color
+	Palette2 tcell.Color
+	Palette3 tcell.Color
+	Palette4 tcell.Color
+	Palette5 tcell.Color
+	Palette6 tcell.Color
+	Palette7 tcell.Color
+	Palette8 tcell.Color
+}
+
+type ThemeConfig struct {
+	Bg0      string `yaml:"bg0"`
+	Bg1      string `yaml:"bg1"`
+	Fg0      string `yaml:"fg0"`
+	Fg1      string `yaml:"fg1"`
+	Palette0 string `yaml:"palette0"`
+	Palette1 string `yaml:"palette1"`
+	Palette2 string `yaml:"palette2"`
+	Palette3 string `yaml:"palette3"`
+	Palette4 string `yaml:"palette4"`
+	Palette5 string `yaml:"palette5"`
+	Palette6 string `yaml:"palette6"`
+	Palette7 string `yaml:"palette7"`
+	Palette8 string `yaml:"palette8"`
+}
+
+func GetFormatterStyleForTheme(themeConfig *ThemeConfig) *chroma.Style {
+	return chroma.MustNewStyle("gruvbox", chroma.StyleEntries{
+		chroma.Text:               themeConfig.Fg1,
+		chroma.Error:              themeConfig.Palette1,
+		chroma.Comment:            themeConfig.Palette0,
+		chroma.Keyword:            themeConfig.Palette1,
+		chroma.KeywordConstant:    themeConfig.Palette5,
+		chroma.KeywordDeclaration: themeConfig.Palette1,
+		chroma.KeywordNamespace:   themeConfig.Palette1,
+		chroma.KeywordType:        themeConfig.Palette3,
+		chroma.Operator:           themeConfig.Fg1,
+		chroma.Punctuation:        themeConfig.Fg1,
+		chroma.Name:               themeConfig.Fg1,
+		chroma.NameAttribute:      themeConfig.Palette2,
+		chroma.NameBuiltin:        themeConfig.Palette3,
+		chroma.NameClass:          themeConfig.Palette6,
+		chroma.NameConstant:       themeConfig.Palette5,
+		chroma.NameDecorator:      themeConfig.Palette5,
+		chroma.NameFunction:       themeConfig.Palette2,
+		chroma.NameTag:            themeConfig.Palette1,
+		chroma.NameVariable:       themeConfig.Fg1,
+		chroma.Literal:            themeConfig.Palette5,
+		chroma.LiteralNumber:      themeConfig.Palette5,
+		chroma.LiteralString:      themeConfig.Palette2,
+		chroma.Background:         themeConfig.Bg0,
+	})
 }
 
 func NewTheme(themePath *string) *Theme {
-	var theme *Theme
+	var themeConfig *ThemeConfig
 	var err error
 	if themePath != nil {
-		theme, err = GetThemeFromPath(themePath)
+		themeConfig, err = GetThemeConfigFromPath(themePath)
 		if err != nil {
-			theme = GetDefaultTheme()
+			themeConfig = GetDefaultThemeConfig()
 		}
 	} else {
-		theme = GetDefaultTheme()
+		themeConfig = GetDefaultThemeConfig()
 	}
-	formatter.RegisterCustomFormatter(GetDefaultFormatterStyle())
-	return theme
+	formatter.RegisterCustomFormatter(GetFormatterStyleForTheme(themeConfig))
+	return &Theme{
+		Bg0:      tcell.GetColor(themeConfig.Bg0),
+		Bg1:      tcell.GetColor(themeConfig.Bg1),
+		Fg0:      tcell.GetColor(themeConfig.Fg0),
+		Fg1:      tcell.GetColor(themeConfig.Fg1),
+		Palette0: tcell.GetColor(themeConfig.Palette0),
+		Palette1: tcell.GetColor(themeConfig.Palette1),
+		Palette2: tcell.GetColor(themeConfig.Palette2),
+		Palette3: tcell.GetColor(themeConfig.Palette3),
+		Palette4: tcell.GetColor(themeConfig.Palette4),
+		Palette5: tcell.GetColor(themeConfig.Palette5),
+		Palette6: tcell.GetColor(themeConfig.Palette6),
+		Palette7: tcell.GetColor(themeConfig.Palette7),
+		Palette8: tcell.GetColor(themeConfig.Palette8),
+	}
 }
 
-func GetThemeFromPath(themePath *string) (*Theme, error) {
+func GetThemeConfigFromPath(themePath *string) (*ThemeConfig, error) {
+	log.Println("themePath", *themePath)
 	themeFile, err := os.ReadFile(*themePath)
 	if err != nil {
 		return nil, err
 	}
-	var theme Theme
-	if err := yaml.Unmarshal(themeFile, &theme); err != nil {
+	var themeConfig ThemeConfig
+	if err := yaml.Unmarshal(themeFile, &themeConfig); err != nil {
 		log.Fatal(err)
 		panic(err)
 	}
-	return &theme, nil
+	return &themeConfig, nil
 }
 
-func GetDefaultTheme() *Theme {
-	return &Theme{
-		Bg0:    tcell.NewRGBColor(40, 40, 40),    // #282828
-		Bg1:    tcell.NewRGBColor(60, 56, 54),    // #3c3836
-		Fg0:    tcell.NewRGBColor(251, 241, 199), // #fbf1c7
-		Fg1:    tcell.NewRGBColor(235, 219, 178), // #ebdbb2
-		Gray:   tcell.NewRGBColor(146, 131, 116), // #928374
-		Red:    tcell.NewRGBColor(251, 73, 52),   // #fb4934
-		Green:  tcell.NewRGBColor(184, 187, 38),  // #b8bb26
-		Yellow: tcell.NewRGBColor(250, 189, 47),  // #fabd2f
-		Blue:   tcell.NewRGBColor(131, 165, 152), // #83a598
-		Purple: tcell.NewRGBColor(211, 134, 155), // #d3869b
-		Aqua:   tcell.NewRGBColor(142, 192, 124), // #8ec07c
-		Orange: tcell.NewRGBColor(254, 128, 25),  // #fe8019
-		Black:  tcell.NewRGBColor(0, 0, 0),       // #000000
+func GetDefaultThemeConfig() *ThemeConfig {
+	return &ThemeConfig{
+		Bg0:      "#282828",
+		Bg1:      "#3c3836",
+		Fg0:      "#fbf1c7",
+		Fg1:      "#ebdbb2",
+		Palette0: "#928374",
+		Palette1: "#fb4934",
+		Palette2: "#b8bb26",
+		Palette3: "#fabd2f",
+		Palette4: "#83a598",
+		Palette5: "#d3869b",
+		Palette6: "#8ec07c",
+		Palette7: "#fe8019",
+		Palette8: "#000000",
 	}
-}
-
-func GetDefaultFormatterStyle() *chroma.Style {
-	return chroma.MustNewStyle("gruvbox", chroma.StyleEntries{
-		chroma.Text:               "#ebdbb2",
-		chroma.Error:              "#fb4934",
-		chroma.Comment:            "#928374",
-		chroma.Keyword:            "#fb4934",
-		chroma.KeywordConstant:    "#d3869b",
-		chroma.KeywordDeclaration: "#fb4934",
-		chroma.KeywordNamespace:   "#fb4934",
-		chroma.KeywordType:        "#fabd2f",
-		chroma.Operator:           "#ebdbb2",
-		chroma.Punctuation:        "#ebdbb2",
-		chroma.Name:               "#ebdbb2",
-		chroma.NameAttribute:      "#b8bb26",
-		chroma.NameBuiltin:        "#fabd2f",
-		chroma.NameClass:          "#8ec07c",
-		chroma.NameConstant:       "#d3869b",
-		chroma.NameDecorator:      "#d3869b",
-		chroma.NameFunction:       "#b8bb26",
-		chroma.NameTag:            "#fb4934",
-		chroma.NameVariable:       "#ebdbb2",
-		chroma.Literal:            "#d3869b",
-		chroma.LiteralNumber:      "#d3869b",
-		chroma.LiteralString:      "#b8bb26",
-		chroma.Background:         "#282828",
-	})
 }

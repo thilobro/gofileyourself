@@ -4,29 +4,33 @@ import (
 	"log"
 	"os"
 
-	"github.com/creasty/defaults"
-
 	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	HistoryLen int    `default:"50" yaml:"history_len"`
-	ThemePath  string `default:".gofileyourself_theme.yaml" yaml:"theme_path"`
+	HistoryLen int    `yaml:"history_len"`
+	ThemePath  string `yaml:"theme_path"`
 }
 
 func NewConfig(configPath *string) (*Config, error) {
-	configFile, err := os.ReadFile(*configPath)
-	if err != nil {
-		return &Config{HistoryLen: 50}, nil
+	config := &Config{
+		HistoryLen: 50,
+		ThemePath:  os.Getenv("HOME") + "/.gofileyourself_theme.yaml",
 	}
-	var config Config
-	if err := defaults.Set(&config); err != nil {
-		log.Fatal(err)
-		panic(err)
+
+	if configFile, err := os.ReadFile(*configPath); err == nil {
+		var tempConfig Config
+		if err := yaml.Unmarshal(configFile, &tempConfig); err != nil {
+			log.Fatal(err)
+			panic(err)
+		}
+		// Override defaults with config file values
+		if tempConfig.HistoryLen != 0 {
+			config.HistoryLen = tempConfig.HistoryLen
+		}
+		if tempConfig.ThemePath != "" {
+			config.ThemePath = tempConfig.ThemePath
+		}
 	}
-	if err := yaml.Unmarshal(configFile, &config); err != nil {
-		log.Fatal(err)
-		panic(err)
-	}
-	return &config, nil
+	return config, nil
 }
