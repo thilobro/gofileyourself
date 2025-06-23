@@ -3,7 +3,9 @@ package helper
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -231,36 +233,93 @@ func OpenInNvim(path string, selectedFilePath *string, app *tview.Application, m
 		app.Stop()
 	}
 	historyPath := filepath.Join(os.Getenv("HOME"), ".gofileyourselfhistory")
-	historyCmd := exec.Command("sh", "-c", "[ \"$(tail -n 1 "+historyPath+" 2>/dev/null)\" != "+path+" ] && echo \""+path+"\" >> "+historyPath)
-	historyCmd.Stdin = os.Stdin
-	historyCmd.Stdout = os.Stdout
-	historyCmd.Stderr = os.Stderr
-	historyCmd.Run()
-	TrimAndGetRecentFiles(historyPath, maxHistoryLen)
+	UpdateRecentFiles(historyPath, &path, maxHistoryLen)
 	return nil
 }
 
-func TrimAndGetRecentFiles(path string, maxHistoryLen int) []string {
-	content, err := os.ReadFile(path)
+func writeStringsToFile(filename string, strings []string) error {
+	// Open the file in write mode
+	os.Remove(filename)
+	file, err := os.Create(filename)
 	if err != nil {
-		return []string{}
+		return fmt.Errorf("failed to create file: %w", err)
 	}
+	defer file.Close()
+
+	// Handle empty slice case
+	if len(strings) == 0 {
+		return nil
+	}
+
+	// Write all but the last string with newlines
+	for _, str := range strings[:len(strings)-1] {
+		_, err := fmt.Fprintf(file, "%s\n", str)
+		if err != nil {
+			return fmt.Errorf("failed to write to file: %w", err)
+		}
+	}
+
+	// Write the last string without a newline
+	_, err = fmt.Fprint(file, strings[len(strings)-1])
+	if err != nil {
+		return fmt.Errorf("failed to write final string: %w", err)
+	}
+
+	return nil
+}
+
+func UpdateRecentFiles(historyPath string, path *string, maxHistoryLen int) []string {
+	// Read existing content
+	content, err := os.ReadFile(historyPath)
+	if err != nil {
+		os.Create(historyPath)
+	}
+
+	// Create map for unique values
+	linesSet := map[string]int{}
+
+	// Split content and add to set
 	lines := strings.Split(string(content), "\n")
-	lenLines := len(lines)
-	if lenLines > maxHistoryLen {
-		historyCmd := exec.Command("sh", "-c", "sed '1,"+strconv.Itoa(lenLines-maxHistoryLen)+"d' -i "+path)
-		historyCmd.Stdin = os.Stdin
-		historyCmd.Stdout = os.Stdout
-		historyCmd.Stderr = os.Stderr
-		historyCmd.Run()
-		return lines[lenLines-maxHistoryLen:]
+	offset := 0
+	if path != nil && *path != "" {
+		offset = 1
 	}
-	return lines
+	for idx, line := range lines {
+		if line != "" { // Skip empty lines
+			linesSet[line] = idx + offset
+		}
+	}
+
+	// Add new path if provided
+	if path != nil && *path != "" {
+		linesSet[*path] = 0
+	}
+
+	// Convert back to slice and limit length
+	var result []string
+	for line := range linesSet {
+		if len(result) >= maxHistoryLen {
+			break
+		}
+		result = append(result, line)
+	}
+	// Sort by original order
+	sort.SliceStable(result, func(i, j int) bool {
+		return linesSet[result[i]] > linesSet[result[j]]
+	})
+
+	// Write back to file
+	if err := writeStringsToFile(historyPath, result); err != nil {
+		log.Printf("Error writing history file: %v", err)
+		return result // Return current state despite write error
+	}
+
+	return result
 }
 
 func GetRecentFile(fileIndex int, maxHistoryLen int) (string, error) {
 	historyPath := filepath.Join(os.Getenv("HOME"), ".gofileyourselfhistory")
-	lines := TrimAndGetRecentFiles(historyPath, maxHistoryLen)
+	lines := UpdateRecentFiles(historyPath, nil, maxHistoryLen)
 	lenLines := len(lines)
 	if fileIndex >= lenLines {
 		return "", errors.New("file index out of range")
