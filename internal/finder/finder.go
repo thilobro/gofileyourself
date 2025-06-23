@@ -67,6 +67,12 @@ func (finder *Finder) handleListUpdates() {
 }
 
 func (finder *Finder) setCurrentLine(lineIndex int) error {
+	if lineIndex < 0 {
+		lineIndex = 0
+	}
+	if lineIndex >= finder.searchedList.GetItemCount() {
+		lineIndex = finder.searchedList.GetItemCount() - 1
+	}
 	if lineIndex < 0 || lineIndex >= finder.searchedList.GetItemCount() {
 		textView := tview.NewTextView().
 			SetDynamicColors(true).
