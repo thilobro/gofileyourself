@@ -96,6 +96,8 @@ func NewDisplay(factories map[widget.Mode]widget.Factory, chooseFilePath *string
 		SelectedFilePath: selectedFilePath,
 		Config:           config,
 		Theme:            theme,
+		RecentCommands:   make([]string, 10),
+		RecentSearches:   make([]string, 10),
 	}
 	explorerWidget, err := explorerFactory.New(context)
 	if err != nil {
