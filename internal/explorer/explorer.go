@@ -554,9 +554,9 @@ func (explorer *Explorer) jumpToAnchor(key string) {
 
 func (explorer *Explorer) cycleRecent(isBackward bool) {
 	if isBackward {
-		explorer.cycleRecentPosition--
-	} else {
 		explorer.cycleRecentPosition++
+	} else {
+		explorer.cycleRecentPosition--
 	}
 	if explorer.cycleRecentPosition < 0 {
 		explorer.cycleRecentPosition = 0
