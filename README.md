@@ -65,6 +65,7 @@ Keys:
 - `mp` - Paste marked files
 - `A<key>` - Set anchor for key
 - `a<key>` - Jump to anchor for key
+- `keyUp/keyDown` - Cycle through last searches or commands
 
 Commands:
 

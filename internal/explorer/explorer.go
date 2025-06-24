@@ -3,6 +3,7 @@ package explorer
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -23,25 +24,27 @@ const (
 
 // Explorer represents the state and behavior of the file explorer
 type Explorer struct {
-	context              *widget.Context
-	currentList          *tview.List
-	parentList           tview.Primitive
-	selectedList         tview.Primitive
-	rootFlex             *tview.Flex
-	listFlex             *tview.Flex
-	directoryToIndexMap  map[string]int
-	footer               *tview.InputField
-	isFooterActive       bool
-	header               *tview.TextView
-	searchInput          string
-	currentSearchTerm    string
-	currentSearchIndeces []int
-	currentFocusedWidget tview.Primitive
-	keyBuffer            string
-	yankedFile           string
-	markedFiles          []string
-	yankedMarkedFiles    []string
-	cycleRecentPosition  int
+	context                 *widget.Context
+	currentList             *tview.List
+	parentList              tview.Primitive
+	selectedList            tview.Primitive
+	rootFlex                *tview.Flex
+	listFlex                *tview.Flex
+	directoryToIndexMap     map[string]int
+	footer                  *tview.InputField
+	isFooterActive          bool
+	header                  *tview.TextView
+	searchInput             string
+	currentSearchTerm       string
+	currentSearchIndeces    []int
+	currentFocusedWidget    tview.Primitive
+	keyBuffer               string
+	yankedFile              string
+	markedFiles             []string
+	yankedMarkedFiles       []string
+	cycleRecentlyVisitedIdx int
+	cycleRecentCommandsIdx  int
+	cycleRecentSearchesIdx  int
 }
 
 func (explorer *Explorer) Root() tview.Primitive {
@@ -109,23 +112,25 @@ func (explorer *Explorer) highlightSearchInput() {
 // NewExplorer creates and initializes a new Explorer
 func NewExplorer(context *widget.Context) (*Explorer, error) {
 	explorer := &Explorer{
-		context:             context,
-		currentList:         tview.NewList(),
-		parentList:          tview.NewList(),
-		selectedList:        tview.NewList(),
-		directoryToIndexMap: make(map[string]int),
-		listFlex:            tview.NewFlex(),
-		rootFlex:            tview.NewFlex(),
-		footer:              tview.NewInputField(),
-		isFooterActive:      false,
-		header:              tview.NewTextView(),
-		searchInput:         "",
-		currentSearchTerm:   "",
-		keyBuffer:           "",
-		yankedFile:          "",
-		markedFiles:         []string{},
-		yankedMarkedFiles:   []string{},
-		cycleRecentPosition: 0,
+		context:                 context,
+		currentList:             tview.NewList(),
+		parentList:              tview.NewList(),
+		selectedList:            tview.NewList(),
+		directoryToIndexMap:     make(map[string]int),
+		listFlex:                tview.NewFlex(),
+		rootFlex:                tview.NewFlex(),
+		footer:                  tview.NewInputField(),
+		isFooterActive:          false,
+		header:                  tview.NewTextView(),
+		searchInput:             "",
+		currentSearchTerm:       "",
+		keyBuffer:               "",
+		yankedFile:              "",
+		markedFiles:             []string{},
+		yankedMarkedFiles:       []string{},
+		cycleRecentlyVisitedIdx: 0,
+		cycleRecentSearchesIdx:  -1,
+		cycleRecentCommandsIdx:  -1,
 	}
 
 	if err := explorer.initialize(); err != nil {
@@ -312,12 +317,15 @@ func (explorer *Explorer) runFooterCommand(inputText string) {
 	switch inputText[0] {
 	case '/':
 		explorer.currentSearchTerm = inputText[1:]
+		explorer.context.RecentSearches = helper.AppendStringToUniqueList(explorer.context.RecentSearches, explorer.currentSearchTerm)
 		explorer.searchInCurrentDirectory()
 		if len(explorer.currentSearchIndeces) > 0 {
 			explorer.setCurrentLine(explorer.currentSearchIndeces[0])
 		}
 	case ':':
 		command := inputText[1:]
+		explorer.context.RecentCommands = helper.AppendStringToUniqueList(explorer.context.RecentCommands, command)
+		log.Println(explorer.context.RecentCommands)
 		parts := strings.Split(command, " ")
 		switch parts[0] {
 		case "q":
@@ -347,6 +355,14 @@ func (explorer *Explorer) runFooterCommand(inputText string) {
 	explorer.currentFocusedWidget = explorer.currentList
 }
 
+func (explorer *Explorer) cycleRecentSearches(backwards bool) (int, string) {
+	return helper.CycleRecentList(explorer.context.RecentSearches, explorer.cycleRecentSearchesIdx, backwards)
+}
+
+func (explorer *Explorer) cycleRecentCommands(backwards bool) (int, string) {
+	return helper.CycleRecentList(explorer.context.RecentCommands, explorer.cycleRecentCommandsIdx, backwards)
+}
+
 func (explorer *Explorer) handleFooterInput(prompt string) {
 	explorer.isFooterActive = true
 	explorer.footer = tview.NewInputField().SetText(prompt)
@@ -355,6 +371,44 @@ func (explorer *Explorer) handleFooterInput(prompt string) {
 	})
 	explorer.footer.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		currentText := explorer.footer.GetText()
+		if event.Key() == tcell.KeyUp {
+			if strings.HasPrefix(currentText, "/") {
+				var search string
+				explorer.cycleRecentSearchesIdx, search = explorer.cycleRecentSearches(true)
+				if search != "" {
+					currentText = "/" + search
+				} else {
+					return nil
+				}
+			} else if strings.HasPrefix(currentText, ":") {
+				var command string
+				explorer.cycleRecentCommandsIdx, command = explorer.cycleRecentCommands(true)
+				if command != "" {
+					currentText = ":" + command
+				} else {
+					return nil
+				}
+			}
+		}
+		if event.Key() == tcell.KeyDown {
+			if strings.HasPrefix(currentText, "/") {
+				var search string
+				explorer.cycleRecentSearchesIdx, search = explorer.cycleRecentSearches(false)
+				if search != "" {
+					currentText = "/" + search
+				} else {
+					return nil
+				}
+			} else if strings.HasPrefix(currentText, ":") {
+				var command string
+				explorer.cycleRecentCommandsIdx, command = explorer.cycleRecentCommands(false)
+				if command != "" {
+					currentText = ":" + command
+				} else {
+					return nil
+				}
+			}
+		}
 		if event.Key() == tcell.KeyBackspace2 {
 			currentTextLen := len(currentText)
 			if currentTextLen <= 1 {
@@ -383,7 +437,9 @@ func (explorer *Explorer) handleFooterInput(prompt string) {
 	explorer.footer.SetChangedFunc(
 		func(text string) {
 			defer explorer.Draw()
-			explorer.searchInput = strings.TrimPrefix(text, "/")
+			if strings.HasPrefix(text, "/") {
+				explorer.searchInput = strings.TrimPrefix(text, "/")
+			}
 		},
 	)
 	explorer.currentFocusedWidget = explorer.footer
@@ -552,21 +608,21 @@ func (explorer *Explorer) jumpToAnchor(key string) {
 	explorer.setCurrentLine(helper.FindExactItem(explorer.currentList, anchorBase))
 }
 
-func (explorer *Explorer) cycleRecent(isBackward bool) {
+func (explorer *Explorer) cycleRecentlyVisited(isBackward bool) {
 	if isBackward {
-		explorer.cycleRecentPosition++
+		explorer.cycleRecentlyVisitedIdx++
 	} else {
-		explorer.cycleRecentPosition--
+		explorer.cycleRecentlyVisitedIdx--
 	}
-	if explorer.cycleRecentPosition < 0 {
-		explorer.cycleRecentPosition = 0
+	if explorer.cycleRecentlyVisitedIdx < 0 {
+		explorer.cycleRecentlyVisitedIdx = 0
 	}
-	recentFile, err := helper.GetRecentFile(explorer.cycleRecentPosition, explorer.context.Config.HistoryLen)
+	recentFile, err := helper.GetRecentFile(explorer.cycleRecentlyVisitedIdx, explorer.context.Config.HistoryLen)
 	if err != nil {
 		if isBackward {
-			explorer.cycleRecentPosition = 0
+			explorer.cycleRecentlyVisitedIdx = 0
 		} else {
-			explorer.cycleRecentPosition--
+			explorer.cycleRecentlyVisitedIdx--
 		}
 		return
 	}
@@ -687,10 +743,10 @@ func (explorer *Explorer) SetupKeyBindings() {
 		}
 		switch rune {
 		case 'r':
-			explorer.cycleRecent(false)
+			explorer.cycleRecentlyVisited(false)
 			return nil
 		case 'R':
-			explorer.cycleRecent(true)
+			explorer.cycleRecentlyVisited(true)
 			return nil
 		case 'M':
 			explorer.toggleMarkForCurrentFile()

@@ -24,6 +24,8 @@ type Context struct {
 	SelectedFilePath *string
 	Config           *config.Config
 	Theme            *theme.Theme
+	RecentCommands   []string
+	RecentSearches   []string
 }
 
 type WidgetInterface interface {

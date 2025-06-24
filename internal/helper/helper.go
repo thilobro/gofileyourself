@@ -233,7 +233,7 @@ func OpenInNvim(path string, selectedFilePath *string, app *tview.Application, m
 		app.Stop()
 	}
 	historyPath := filepath.Join(os.Getenv("HOME"), ".gofileyourselfhistory")
-	UpdateRecentFiles(historyPath, &path, maxHistoryLen)
+	UpdateRecentLinesFile(historyPath, &path, maxHistoryLen)
 	return nil
 }
 
@@ -268,11 +268,11 @@ func writeStringsToFile(filename string, strings []string) error {
 	return nil
 }
 
-func UpdateRecentFiles(historyPath string, path *string, maxHistoryLen int) []string {
+func UpdateRecentLinesFile(filePath string, path *string, maxLines int) []string {
 	// Read existing content
-	content, err := os.ReadFile(historyPath)
+	content, err := os.ReadFile(filePath)
 	if err != nil {
-		os.Create(historyPath)
+		os.Create(filePath)
 	}
 
 	// Create map for unique values
@@ -298,7 +298,7 @@ func UpdateRecentFiles(historyPath string, path *string, maxHistoryLen int) []st
 	// Convert back to slice and limit length
 	var result []string
 	for line := range linesSet {
-		if len(result) >= maxHistoryLen {
+		if len(result) >= maxLines {
 			break
 		}
 		result = append(result, line)
@@ -309,7 +309,7 @@ func UpdateRecentFiles(historyPath string, path *string, maxHistoryLen int) []st
 	})
 
 	// Write back to file
-	if err := writeStringsToFile(historyPath, result); err != nil {
+	if err := writeStringsToFile(filePath, result); err != nil {
 		log.Printf("Error writing history file: %v", err)
 		return result // Return current state despite write error
 	}
@@ -319,7 +319,7 @@ func UpdateRecentFiles(historyPath string, path *string, maxHistoryLen int) []st
 
 func GetRecentFile(fileIndex int, maxHistoryLen int) (string, error) {
 	historyPath := filepath.Join(os.Getenv("HOME"), ".gofileyourselfhistory")
-	lines := UpdateRecentFiles(historyPath, nil, maxHistoryLen)
+	lines := UpdateRecentLinesFile(historyPath, nil, maxHistoryLen)
 	lenLines := len(lines)
 	if fileIndex >= lenLines {
 		return "", errors.New("file index out of range")
@@ -458,4 +458,38 @@ func GetAbsFilePath(filePath string, dirPath string) string {
 	} else {
 		return filepath.Join(dirPath, filePath)
 	}
+}
+
+func AppendStringToUniqueList(recentList []string, newString string) []string {
+	log.Println(newString)
+	keep := func(element string) bool {
+		return element != newString && element != ""
+	}
+	n := 0
+	for _, x := range recentList {
+		if keep(x) {
+			recentList[n] = x
+			n++
+		}
+	}
+	recentList = recentList[:n]
+	recentList = append(recentList, newString)
+	return recentList
+}
+
+func CycleRecentList(recentList []string, index int, backwards bool) (int, string) {
+	if backwards {
+		index++
+	} else {
+		index--
+	}
+	if index < 0 {
+		index = -1
+	} else if index >= len(recentList) {
+		index = len(recentList) - 1
+	}
+	if index == -1 {
+		return index, ""
+	}
+	return index, recentList[index]
 }
