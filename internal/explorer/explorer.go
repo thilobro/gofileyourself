@@ -610,9 +610,9 @@ func (explorer *Explorer) jumpToAnchor(key string) {
 
 func (explorer *Explorer) cycleRecentlyVisited(isBackward bool) {
 	if isBackward {
-		explorer.cycleRecentlyVisitedIdx++
-	} else {
 		explorer.cycleRecentlyVisitedIdx--
+	} else {
+		explorer.cycleRecentlyVisitedIdx++
 	}
 	if explorer.cycleRecentlyVisitedIdx < 0 {
 		explorer.cycleRecentlyVisitedIdx = 0
