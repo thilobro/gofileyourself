@@ -1,6 +1,6 @@
 module github.com/thilobro/gofileyourself
 
-go 1.22.1
+go 1.24.4
 
 require (
 	github.com/alecthomas/chroma v0.10.0
@@ -9,14 +9,12 @@ require (
 	github.com/gdamore/tcell/v2 v2.7.1
 	github.com/otiai10/copy v1.14.1
 	github.com/rivo/tview v0.0.0-20250330220935-949945f8d922
-	github.com/sahilm/fuzzy v0.1.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	github.com/dlclark/regexp2 v1.4.0 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
-	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect

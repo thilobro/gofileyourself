@@ -5,14 +5,15 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strings"
 
 	"github.com/thilobro/gofileyourself/internal/helper"
 	"github.com/thilobro/gofileyourself/internal/widget"
 
+	gostring "github.com/boyter/go-string"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"github.com/sahilm/fuzzy"
 )
 
 type Finder struct {
@@ -222,75 +223,50 @@ func (finder *Finder) manageFuzzySearch(text string) {
 }
 
 func (finder *Finder) fuzzySearch(text string) {
-	displayNames := make([]string, finder.fileList.GetItemCount())
-	texts := make([]string, finder.fileList.GetItemCount())
+	// Create new list with matches
+	text, _ = strings.CutSuffix(text, " ")
+	searchTerms := strings.Split(text, " ")
 	startHighlightMarker := "[red::b]"
 	endHighlightMarker := "[-::-]"
-	for i := 0; i < finder.fileList.GetItemCount(); i++ {
-		displayName, text := finder.fileList.GetItemText(i)
-		displayNameWithoutHighlight := strings.Replace(displayName, startHighlightMarker, "", -1)
-		displayNameWithoutHighlight = strings.Replace(displayNameWithoutHighlight, endHighlightMarker, "", -1)
-		displayNames[i] = displayName
-		texts[i] = text
-	}
-
-	// Split the search text into patterns
-	patterns := strings.Fields(text)
-	if len(patterns) == 0 {
-		return
-	}
-
-	// Start with all matches from the first pattern
-	matches := fuzzy.Find(patterns[0], displayNames)
-	matchedStrs := make([]string, len(matches))
-	for i, match := range matches {
-		matchedStrs[i] = match.Str
-	}
-
-	// Keep track of all matched indexes for each string
-	allMatchedIndexes := make(map[string][]int)
-	for _, match := range matches {
-		allMatchedIndexes[match.Str] = match.MatchedIndexes
-	}
-
-	// Filter through remaining patterns and collect their matched indexes
-	for _, pattern := range patterns[1:] {
-		matches = fuzzy.Find(pattern, matchedStrs)
-		newMatchedStrs := make([]string, len(matches))
-		for i, match := range matches {
-			newMatchedStrs[i] = match.Str
-			// Append new matched indexes to existing ones
-			allMatchedIndexes[match.Str] = append(allMatchedIndexes[match.Str], match.MatchedIndexes...)
-		}
-		matchedStrs = newMatchedStrs
-	}
-
-	// Create new list with matches
 	newList := tview.NewList().ShowSecondaryText(false)
-	line := ""
-	for _, match := range matches {
-		for i := 0; i < len(match.Str); i++ {
-			if slices.Contains(allMatchedIndexes[match.Str], i) {
-				line = line + startHighlightMarker + string(match.Str[i]) + endHighlightMarker
+	itemCount := finder.fileList.GetItemCount()
+	searchHits := slices.Repeat([]int{0}, itemCount)
+	lineIdxs := make([]int, itemCount)
+	for i := 0; i < itemCount; i++ {
+		lineIdxs[i] = i
+	}
+	indeces := make(map[int][][]int, itemCount)
+	for _, searchTerm := range searchTerms {
+		for i := 0; i < itemCount; i++ {
+			primaryText, _ := finder.fileList.GetItemText(i)
+			displayNameWithoutHighlight := strings.Replace(primaryText, startHighlightMarker, "", -1)
+			displayNameWithoutHighlight = strings.Replace(displayNameWithoutHighlight, endHighlightMarker, "", -1)
+			idxs := gostring.IndexAll(displayNameWithoutHighlight, searchTerm, -1)
+			if val, exists := indeces[i]; !exists {
+				indeces[i] = idxs
 			} else {
-				line = line + string(match.Str[i])
+				indeces[i] = append(val, idxs...)
+			}
+			for _, idx := range idxs {
+				searchHits[i] = searchHits[i] + len(idx)
 			}
 		}
-		newList.AddItem(line, texts[match.Index], 0, nil)
-		line = ""
 	}
 
-	if len(matches) > 0 {
-		finder.setCurrentLine(0)
+	sort.SliceStable(lineIdxs, func(i, j int) bool {
+		return searchHits[lineIdxs[i]] > searchHits[lineIdxs[j]]
+	})
+	for j := 0; j < itemCount; j++ {
+		displayName, secondaryText := finder.fileList.GetItemText(lineIdxs[j])
+		index := indeces[lineIdxs[j]]
+		newList.AddItem(gostring.HighlightString(displayName, index, startHighlightMarker, endHighlightMarker), secondaryText, 0, nil)
 	}
-
 	// Send the new list through the channel
 	select {
 	case finder.listUpdateChan <- newList:
 	default:
 		// If channel is full, skip this update
 	}
-
 	finder.searchTerm = text
 }
 
