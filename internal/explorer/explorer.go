@@ -209,7 +209,7 @@ func (explorer *Explorer) setSelectedDirectory(selectedPath string) error {
 	}
 
 	if newSelectedList == nil {
-		explorer.selectedList, err = helper.LoadFilePreview(selectedPath)
+		explorer.selectedList, err = helper.LoadFilePreview(selectedPath, nil)
 		if err != nil {
 			return err
 		}

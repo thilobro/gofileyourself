@@ -105,7 +105,7 @@ func (finder *Finder) setSelectedDirectory(selectedPath string) error {
 	}
 
 	if newSelectedList == nil {
-		finder.selectedList, err = helper.LoadFilePreview(selectedPath)
+		finder.selectedList, err = helper.LoadFilePreview(selectedPath, &finder.searchTerm)
 		if err != nil {
 			return err
 		}
@@ -196,6 +196,8 @@ func (finder *Finder) handleFooterInput() {
 			defer finder.Draw()
 			if text == "/" {
 				finder.searchedList = finder.fileList
+				finder.searchTerm = ""
+				finder.setCurrentLine(0)
 				return
 			}
 			currentInput := strings.TrimPrefix(text, "/")
@@ -239,9 +241,7 @@ func (finder *Finder) fuzzySearch(text string) {
 	for _, searchTerm := range searchTerms {
 		for i := 0; i < itemCount; i++ {
 			primaryText, _ := finder.fileList.GetItemText(i)
-			displayNameWithoutHighlight := strings.Replace(primaryText, startHighlightMarker, "", -1)
-			displayNameWithoutHighlight = strings.Replace(displayNameWithoutHighlight, endHighlightMarker, "", -1)
-			idxs := gostring.IndexAll(displayNameWithoutHighlight, searchTerm, -1)
+			idxs := gostring.IndexAll(primaryText, searchTerm, -1)
 			if val, exists := indeces[i]; !exists {
 				indeces[i] = idxs
 			} else {
@@ -270,6 +270,14 @@ func (finder *Finder) fuzzySearch(text string) {
 	finder.searchTerm = text
 }
 
+func (finder *Finder) RemoveContentFromDisplayName() {
+	for i := 0; i < finder.searchedList.GetItemCount(); i++ {
+		displayName, secondaryText := finder.searchedList.GetItemText(i)
+		displayName = strings.Split(displayName, " >>> ")[0]
+		finder.searchedList.SetItemText(i, displayName, secondaryText)
+	}
+}
+
 func (finder *Finder) resetFileList(showContent bool) error {
 	finder.fileList.Clear()
 	fileList, err := helper.LoadDirectory(finder.context.CurrentPath, finder.context.ShowHiddenFiles, showContent, true, []string{})
@@ -295,8 +303,10 @@ func (finder *Finder) Root() tview.Primitive {
 func (finder *Finder) Draw() {
 	finder.rootFlex.Clear()
 	listFlex := tview.NewFlex()
+	finder.RemoveContentFromDisplayName()
 	listFlex.AddItem(finder.searchedList, 0, 1, true)
 	if finder.selectedList != nil {
+		listFlex.AddItem(tview.NewBox(), 2, 0, false)
 		listFlex.AddItem(finder.selectedList, 0, 1, true)
 	}
 	finder.rootFlex.SetDirection(tview.FlexRow)

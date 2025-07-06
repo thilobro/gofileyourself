@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"sort"
 	"strconv"
@@ -128,7 +129,7 @@ func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursiv
 			}
 			if showContent && IsTextFile(absPath) {
 				content, _ := os.ReadFile(absPath)
-				displayName += " " + string(content)
+				displayName += " >>> " + string(content)
 
 			}
 
@@ -169,7 +170,7 @@ func IsTextFile(path string) bool {
 }
 
 // LoadFilePreview is a helper function that creates a text view for file contents
-func LoadFilePreview(path string) (*tview.TextView, error) {
+func LoadFilePreview(path string, searchTerm *string) (*tview.TextView, error) {
 	// Create text view
 	textView := tview.NewTextView().
 		SetDynamicColors(true).
@@ -207,7 +208,22 @@ func LoadFilePreview(path string) (*tview.TextView, error) {
 		if err != nil {
 			return nil, err
 		}
-		textView.SetText(buf.String())
+		formattedContent := buf.String()
+		if *searchTerm == "" {
+			formattedContent = strings.ReplaceAll(formattedContent, "[\"hlrg\"]", "")
+			formattedContent = strings.ReplaceAll(formattedContent, "[\"\"]", "")
+			searchTerm = nil
+		}
+		if searchTerm != nil {
+			pattern := regexp.MustCompile("(?i)" + regexp.QuoteMeta(*searchTerm))
+			formattedContent = pattern.ReplaceAllString(formattedContent, "[\"hlrg\"]${0}[\"\"]")
+		}
+		textView.SetText(formattedContent)
+		if searchTerm != nil {
+			textView.SetRegions(true)
+			textView.Highlight("hlrg")
+			textView.ScrollToHighlight()
+		}
 		return textView, nil
 	}
 	textView.SetText("[gray::]No preview...[-::]")
