@@ -209,7 +209,7 @@ func LoadFilePreview(path string, searchTerm *string) (*tview.TextView, error) {
 			return nil, err
 		}
 		formattedContent := buf.String()
-		if *searchTerm == "" {
+		if searchTerm != nil && *searchTerm == "" {
 			formattedContent = strings.ReplaceAll(formattedContent, "[\"hlrg\"]", "")
 			formattedContent = strings.ReplaceAll(formattedContent, "[\"\"]", "")
 			searchTerm = nil
