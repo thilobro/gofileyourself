@@ -215,8 +215,11 @@ func LoadFilePreview(path string, searchTerm *string) (*tview.TextView, error) {
 			searchTerm = nil
 		}
 		if searchTerm != nil {
-			pattern := regexp.MustCompile("(?i)" + regexp.QuoteMeta(*searchTerm))
-			formattedContent = pattern.ReplaceAllString(formattedContent, "[\"hlrg\"]${0}[\"\"]")
+			terms := strings.Split(*searchTerm, " ")
+			for _, term := range terms {
+				pattern := regexp.MustCompile("(?i)" + regexp.QuoteMeta(term))
+				formattedContent = pattern.ReplaceAllString(formattedContent, "[\"hlrg\"]${0}[\"\"]")
+			}
 		}
 		textView.SetText(formattedContent)
 		if searchTerm != nil {
@@ -508,4 +511,21 @@ func CycleRecentList(recentList []string, index int, backwards bool) (int, strin
 		return index, ""
 	}
 	return index, recentList[index]
+}
+
+func CopyListView(original *tview.List) *tview.List {
+	// Create a new ListView instance
+	newList := tview.NewList().ShowSecondaryText(false)
+
+	// Copy items from original to new list
+	//
+	for j := 0; j < original.GetItemCount(); j++ {
+		primaryText, secondaryText := original.GetItemText(j)
+		newList.AddItem(primaryText, secondaryText, 0, nil)
+	}
+
+	// Copy current selection state
+	newList.SetCurrentItem(original.GetCurrentItem())
+
+	return newList
 }

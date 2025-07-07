@@ -132,7 +132,7 @@ func (finder *Finder) SetupKeyBindings() {
 			// Remember current selection before refresh
 			_, currentName := finder.searchedList.GetItemText(finder.searchedList.GetCurrentItem())
 			finder.resetFileList(false)
-			finder.searchedList = finder.fileList
+			finder.searchedList = helper.CopyListView(finder.fileList)
 
 			// Restore current selection
 			if idx := helper.FindExactItem(finder.searchedList, currentName); idx >= 0 {
@@ -190,16 +190,17 @@ func (finder *Finder) handleFooterInput() {
 		finder.footer.SetText(currentText)
 		return nil
 	})
-	finder.searchedList = finder.fileList
+	finder.searchedList = helper.CopyListView(finder.fileList)
 	finder.footer.SetChangedFunc(
 		func(text string) {
 			defer finder.Draw()
 			if text == "/" {
-				finder.searchedList = finder.fileList
+				finder.searchedList = helper.CopyListView(finder.fileList)
 				finder.searchTerm = ""
 				finder.setCurrentLine(0)
 				return
 			}
+
 			currentInput := strings.TrimPrefix(text, "/")
 			go finder.manageFuzzySearch(currentInput)
 		},
@@ -285,7 +286,7 @@ func (finder *Finder) resetFileList(showContent bool) error {
 		return err
 	}
 	finder.fileList = fileList
-	finder.searchedList = finder.fileList
+	finder.searchedList = helper.CopyListView(finder.fileList)
 	return nil
 }
 
@@ -364,7 +365,7 @@ func (finder *Finder) showRecentHistory() {
 		line := scanner.Text()
 		finder.fileList.InsertItem(0, line, line, 0, nil)
 	}
-	finder.searchedList = finder.fileList
+	finder.searchedList = helper.CopyListView(finder.fileList)
 	finder.searchInDirectory()
 }
 
@@ -372,6 +373,6 @@ func (finder *Finder) showGrep() {
 	finder.title = "Grep"
 	finder.fileList.Clear()
 	finder.resetFileList(true)
-	finder.searchedList = finder.fileList
+	finder.searchedList = helper.CopyListView(finder.fileList)
 	finder.searchInDirectory()
 }
