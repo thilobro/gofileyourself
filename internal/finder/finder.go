@@ -367,6 +367,7 @@ func (finder *Finder) showRecentHistory() {
 	}
 	finder.searchedList = helper.CopyListView(finder.fileList)
 	finder.searchInDirectory()
+	finder.setCurrentLine(0)
 }
 
 func (finder *Finder) showGrep() {
