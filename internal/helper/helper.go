@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -65,7 +64,6 @@ func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursiv
 	if !fileInfo.IsDir() {
 		return nil, nil
 	}
-
 	list := tview.NewList().ShowSecondaryText(false)
 
 	var processDir func(dirPath string) error
@@ -75,6 +73,9 @@ func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursiv
 			return err
 		}
 		if len(files) == 0 {
+			if !recursive {
+				list.AddItem("Directory is empty...", "", 0, nil)
+			}
 			return nil
 		}
 
@@ -329,7 +330,6 @@ func UpdateRecentLinesFile(filePath string, path *string, maxLines int) []string
 
 	// Write back to file
 	if err := writeStringsToFile(filePath, result); err != nil {
-		log.Printf("Error writing history file: %v", err)
 		return result // Return current state despite write error
 	}
 
@@ -487,7 +487,6 @@ func GetAbsFilePath(filePath string, dirPath string) string {
 }
 
 func AppendStringToUniqueList(recentList []string, newString string) []string {
-	log.Println(newString)
 	keep := func(element string) bool {
 		return element != newString && element != ""
 	}
