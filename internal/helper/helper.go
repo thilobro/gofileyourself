@@ -519,19 +519,34 @@ func CycleRecentList(recentList []string, index int, backwards bool) (int, strin
 	return index, recentList[index]
 }
 
-func CopyListView(original *tview.List) *tview.List {
-	// Create a new ListView instance
-	newList := tview.NewList().ShowSecondaryText(false)
-
-	// Copy items from original to new list
-	//
-	for j := 0; j < original.GetItemCount(); j++ {
-		primaryText, secondaryText := original.GetItemText(j)
-		newList.AddItem(primaryText, secondaryText, 0, nil)
+func CopyListContent(original *tview.List, copy *tview.List) {
+	currentItem := copy.GetCurrentItem()
+	copy.Clear()
+	for i := 0; i < original.GetItemCount(); i++ {
+		primaryText, secondaryText := original.GetItemText(i)
+		copy.AddItem(primaryText, secondaryText, 0, nil)
 	}
+	copy.SetCurrentItem(currentItem)
+}
 
-	// Copy current selection state
-	newList.SetCurrentItem(original.GetCurrentItem())
-
-	return newList
+func ShortenPathsIfNecessary(pathList *tview.List, maxPathLen int) {
+	startHighlightMarker := "[red::b]"
+	for i := 0; i < pathList.GetItemCount(); i++ {
+		displayName, secondaryText := pathList.GetItemText(i)
+		displayLen := len(displayName)
+		if displayLen > maxPathLen {
+			parts := strings.Split(displayName, "/")
+			shortDisplayName := parts[0]
+			if len(parts) >= 2 {
+				for _, part := range parts[1 : len(parts)-1] {
+					if !strings.Contains(part, startHighlightMarker) {
+						part = "..."
+					}
+					shortDisplayName = shortDisplayName + "/" + part
+				}
+				shortDisplayName = shortDisplayName + parts[len(parts)-1]
+			}
+			pathList.SetItemText(i, shortDisplayName, secondaryText)
+		}
+	}
 }
