@@ -92,9 +92,14 @@ func (finder *Finder) setCurrentLine(lineIndex int) error {
 // setSelectedDirectory updates the selected directory/file preview
 func (finder *Finder) setSelectedDirectory(selectedPath string) error {
 	selectedAbsolutePath, _ := filepath.Abs(selectedPath)
+	isFileNotFound := helper.IsFileNotFound(selectedAbsolutePath)
+	if isFileNotFound {
+		finder.selectedList = tview.NewTextArea().SetText("Not found...", false)
+		return nil
+	}
 	isDirEmpty, _ := helper.IsDirectoryEmpty(selectedAbsolutePath)
 	if isDirEmpty {
-		finder.selectedList = tview.NewTextArea().SetText("Directory is empty", false)
+		finder.selectedList = tview.NewTextArea().SetText("Directory is empty...", false)
 		return nil
 	}
 	selectedDirectoryIndex := 0

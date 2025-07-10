@@ -346,6 +346,13 @@ func GetRecentFile(fileIndex int, maxHistoryLen int) (string, error) {
 	return lines[lenLines-fileIndex-1], nil
 }
 
+func IsFileNotFound(path string) bool {
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return true
+	}
+	return false
+}
+
 func IsDirectoryEmpty(path string) (bool, error) {
 	f, err := os.Open(path)
 	if err != nil {
