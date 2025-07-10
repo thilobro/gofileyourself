@@ -3,7 +3,6 @@ package explorer
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -198,7 +197,7 @@ func (explorer *Explorer) setSelectedDirectory(selectedPath string) error {
 	selectedAbsolutePath, _ := filepath.Abs(selectedPath)
 	isDirEmpty, _ := helper.IsDirectoryEmpty(selectedAbsolutePath)
 	if isDirEmpty {
-		explorer.selectedList = tview.NewTextArea().SetText("Directory is empty", false)
+		explorer.selectedList = tview.NewTextArea().SetText("Directory is empty...", false)
 		return nil
 	}
 	selectedDirectoryIndex := explorer.directoryToIndexMap[selectedAbsolutePath]
@@ -244,14 +243,6 @@ func (explorer *Explorer) setParentDirectory(path string) error {
 
 // setCurrentDirectory changes the current directory and updates related views
 func (explorer *Explorer) setCurrentDirectory(path string) error {
-	isDirEmpty, _ := helper.IsDirectoryEmpty(path)
-	if isDirEmpty {
-		if explorer.context.CurrentPath == path {
-			explorer.setCurrentDirectory(path + "/..")
-		}
-		return nil
-	}
-
 	// Update current directory
 	currentAbsolutePath, _ := filepath.Abs(path)
 	currentDirectoryIndex := explorer.directoryToIndexMap[currentAbsolutePath]
@@ -325,7 +316,6 @@ func (explorer *Explorer) runFooterCommand(inputText string) {
 	case ':':
 		command := inputText[1:]
 		explorer.context.RecentCommands = helper.AppendStringToUniqueList(explorer.context.RecentCommands, command)
-		log.Println(explorer.context.RecentCommands)
 		parts := strings.Split(command, " ")
 		switch parts[0] {
 		case "q":
