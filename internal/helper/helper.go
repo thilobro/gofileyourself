@@ -85,7 +85,9 @@ func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursiv
 			if !showHiddenFiles && len(fileName) > 0 && fileName[0] == '.' {
 				continue
 			}
-			fileSlice = append(fileSlice, file)
+			if IsInterestingFile(fileName) {
+				fileSlice = append(fileSlice, file)
+			}
 		}
 
 		// Sort: directories first, then alphabetically
@@ -128,7 +130,7 @@ func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursiv
 			} else if info.Mode()&0o111 != 0 {
 				displayName += "*"
 			}
-			if showContent && IsTextFile(absPath) {
+			if showContent && IsInterestingFile(absPath) && IsTextFile(absPath) {
 				content, _ := os.ReadFile(absPath)
 				displayName += " >>> " + string(content)
 
@@ -566,4 +568,10 @@ func ShortenPathsIfNecessary(pathList *tview.List, maxPathLen int) {
 			pathList.SetItemText(i, shortDisplayName, secondaryText)
 		}
 	}
+}
+
+func IsInterestingFile(path string) bool {
+	uninterestingFileTypes := []string{".pyc", ".mod", "typed", ".lock"}
+	extension := filepath.Ext(path)
+	return !slices.Contains(uninterestingFileTypes, extension)
 }
