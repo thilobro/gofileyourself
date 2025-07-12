@@ -30,6 +30,14 @@ type Finder struct {
 	title                string
 }
 
+func (finder *Finder) setDrawFunc() {
+	finder.searchedList.SetDrawFunc(func(screen tcell.Screen, x int, y int, width int, height int) (int, int, int, int) {
+		finder.fuzzySearch()
+		helper.ShortenPathsIfNecessary(finder.searchedList, width)
+		return x, y, width, height
+	})
+}
+
 func NewFinder(context *widget.Context) (*Finder, error) {
 	finder := &Finder{
 		context:         context,
@@ -37,6 +45,7 @@ func NewFinder(context *widget.Context) (*Finder, error) {
 		footer:          tview.NewInputField(),
 		fileList:        tview.NewList(),
 		selectedList:    tview.NewList().ShowSecondaryText(false),
+		searchedList:    tview.NewList().ShowSecondaryText(false),
 		searchTerm:      "",
 		fuzzySearchQuit: make(chan bool),
 		listUpdateChan:  make(chan *tview.List, 10), // Buffered channel
@@ -45,6 +54,8 @@ func NewFinder(context *widget.Context) (*Finder, error) {
 	finder.resetFileList(false)
 	finder.SetupKeyBindings()
 	finder.currentFocusedWidget = finder.searchedList
+	finder.searchedList.Clear()
+	finder.setDrawFunc()
 
 	// Start list update handler
 	go finder.handleListUpdates()
@@ -59,15 +70,14 @@ func NewFinder(context *widget.Context) (*Finder, error) {
 
 func (finder *Finder) handleListUpdates() {
 	for newList := range finder.listUpdateChan {
-		finder.searchedList = newList
 		finder.context.App.QueueUpdateDraw(func() {
-			finder.setCurrentLine(0)
-			finder.Draw()
+			helper.CopyListContent(newList, finder.searchedList)
 		})
 	}
 }
 
 func (finder *Finder) setCurrentLine(lineIndex int) error {
+	defer finder.Draw()
 	if lineIndex < 0 {
 		lineIndex = 0
 	}
@@ -137,7 +147,7 @@ func (finder *Finder) SetupKeyBindings() {
 			// Remember current selection before refresh
 			_, currentName := finder.searchedList.GetItemText(finder.searchedList.GetCurrentItem())
 			finder.resetFileList(false)
-			finder.searchedList = helper.CopyListView(finder.fileList)
+			helper.CopyListContent(finder.fileList, finder.searchedList)
 
 			// Restore current selection
 			if idx := helper.FindExactItem(finder.searchedList, currentName); idx >= 0 {
@@ -195,12 +205,12 @@ func (finder *Finder) handleFooterInput() {
 		finder.footer.SetText(currentText)
 		return nil
 	})
-	finder.searchedList = helper.CopyListView(finder.fileList)
+	helper.CopyListContent(finder.fileList, finder.searchedList)
 	finder.footer.SetChangedFunc(
 		func(text string) {
 			defer finder.Draw()
 			if text == "/" {
-				finder.searchedList = helper.CopyListView(finder.fileList)
+				helper.CopyListContent(finder.fileList, finder.searchedList)
 				finder.searchTerm = ""
 				finder.setCurrentLine(0)
 				return
@@ -226,14 +236,14 @@ func (finder *Finder) manageFuzzySearch(text string) {
 	case <-finder.fuzzySearchQuit:
 		return
 	default:
-		finder.fuzzySearch(text)
+		finder.searchTerm = text
 	}
 }
 
-func (finder *Finder) fuzzySearch(text string) {
+func (finder *Finder) fuzzySearch() {
 	// Create new list with matches
-	text, _ = strings.CutSuffix(text, " ")
-	searchTerms := strings.Split(text, " ")
+	text, _ := strings.CutSuffix(finder.searchTerm, " ")
+	searchTerms := strings.FieldsFunc(text, func(r rune) bool { return r == ' ' || r == '/' })
 	startHighlightMarker := "[red::b]"
 	endHighlightMarker := "[-::-]"
 	newList := tview.NewList().ShowSecondaryText(false)
@@ -273,7 +283,6 @@ func (finder *Finder) fuzzySearch(text string) {
 	default:
 		// If channel is full, skip this update
 	}
-	finder.searchTerm = text
 }
 
 func (finder *Finder) RemoveContentFromDisplayName() {
@@ -291,7 +300,7 @@ func (finder *Finder) resetFileList(showContent bool) error {
 		return err
 	}
 	finder.fileList = fileList
-	finder.searchedList = helper.CopyListView(finder.fileList)
+	helper.CopyListContent(finder.fileList, finder.searchedList)
 	return nil
 }
 
@@ -370,15 +379,14 @@ func (finder *Finder) showRecentHistory() {
 		line := scanner.Text()
 		finder.fileList.InsertItem(0, line, line, 0, nil)
 	}
-	finder.searchedList = helper.CopyListView(finder.fileList)
+	helper.CopyListContent(finder.fileList, finder.searchedList)
 	finder.searchInDirectory()
-	finder.setCurrentLine(0)
 }
 
 func (finder *Finder) showGrep() {
 	finder.title = "Grep"
 	finder.fileList.Clear()
 	finder.resetFileList(true)
-	finder.searchedList = helper.CopyListView(finder.fileList)
+	helper.CopyListContent(finder.fileList, finder.searchedList)
 	finder.searchInDirectory()
 }
