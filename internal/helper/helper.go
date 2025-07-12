@@ -529,6 +529,23 @@ func CopyListContent(original *tview.List, copy *tview.List) {
 	copy.SetCurrentItem(currentItem)
 }
 
+func CopyListView(original *tview.List) *tview.List {
+	// Create a new ListView instance
+	newList := tview.NewList().ShowSecondaryText(false)
+
+	// Copy items from original to new list
+	//
+	for j := 0; j < original.GetItemCount(); j++ {
+		primaryText, secondaryText := original.GetItemText(j)
+		newList.AddItem(primaryText, secondaryText, 0, nil)
+	}
+
+	// Copy current selection state
+	newList.SetCurrentItem(original.GetCurrentItem())
+
+	return newList
+}
+
 func ShortenPathsIfNecessary(pathList *tview.List, maxPathLen int) {
 	startHighlightMarker := "[red::b]"
 	for i := 0; i < pathList.GetItemCount(); i++ {

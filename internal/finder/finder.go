@@ -22,6 +22,7 @@ type Finder struct {
 	footer               *tview.InputField
 	fileList             *tview.List
 	searchedList         *tview.List
+	previousSearchedList *tview.List
 	selectedList         tview.Primitive
 	currentFocusedWidget tview.Primitive
 	searchTerm           string
@@ -32,7 +33,8 @@ type Finder struct {
 
 func (finder *Finder) setDrawFunc() {
 	finder.searchedList.SetDrawFunc(func(screen tcell.Screen, x int, y int, width int, height int) (int, int, int, int) {
-		finder.fuzzySearch()
+		helper.CopyListContent(finder.previousSearchedList, finder.searchedList)
+		finder.RemoveContentFromDisplayName()
 		helper.ShortenPathsIfNecessary(finder.searchedList, width)
 		return x, y, width, height
 	})
@@ -40,21 +42,21 @@ func (finder *Finder) setDrawFunc() {
 
 func NewFinder(context *widget.Context) (*Finder, error) {
 	finder := &Finder{
-		context:         context,
-		rootFlex:        tview.NewFlex(),
-		footer:          tview.NewInputField(),
-		fileList:        tview.NewList(),
-		selectedList:    tview.NewList().ShowSecondaryText(false),
-		searchedList:    tview.NewList().ShowSecondaryText(false),
-		searchTerm:      "",
-		fuzzySearchQuit: make(chan bool),
-		listUpdateChan:  make(chan *tview.List, 10), // Buffered channel
-		title:           "Find",
+		context:              context,
+		rootFlex:             tview.NewFlex(),
+		footer:               tview.NewInputField(),
+		fileList:             tview.NewList(),
+		selectedList:         tview.NewList().ShowSecondaryText(false),
+		searchedList:         tview.NewList().ShowSecondaryText(false),
+		previousSearchedList: tview.NewList().ShowSecondaryText(false),
+		searchTerm:           "",
+		fuzzySearchQuit:      make(chan bool),
+		listUpdateChan:       make(chan *tview.List, 10), // Buffered channel
+		title:                "Find",
 	}
 	finder.resetFileList(false)
 	finder.SetupKeyBindings()
 	finder.currentFocusedWidget = finder.searchedList
-	finder.searchedList.Clear()
 	finder.setDrawFunc()
 
 	// Start list update handler
@@ -70,8 +72,11 @@ func NewFinder(context *widget.Context) (*Finder, error) {
 
 func (finder *Finder) handleListUpdates() {
 	for newList := range finder.listUpdateChan {
+		helper.CopyListContent(newList, finder.searchedList)
+		helper.CopyListContent(finder.searchedList, finder.previousSearchedList)
 		finder.context.App.QueueUpdateDraw(func() {
-			helper.CopyListContent(newList, finder.searchedList)
+			finder.setCurrentLine(0)
+			finder.Draw()
 		})
 	}
 }
@@ -83,15 +88,6 @@ func (finder *Finder) setCurrentLine(lineIndex int) error {
 	}
 	if lineIndex >= finder.searchedList.GetItemCount() {
 		lineIndex = finder.searchedList.GetItemCount() - 1
-	}
-	if lineIndex < 0 || lineIndex >= finder.searchedList.GetItemCount() {
-		textView := tview.NewTextView().
-			SetDynamicColors(true).
-			SetRegions(true).
-			SetWordWrap(true)
-		textView.SetText("[gray::]No matches...[-::]")
-		finder.selectedList = textView
-		return nil
 	}
 	finder.searchedList.SetCurrentItem(lineIndex)
 
@@ -236,13 +232,13 @@ func (finder *Finder) manageFuzzySearch(text string) {
 	case <-finder.fuzzySearchQuit:
 		return
 	default:
-		finder.searchTerm = text
+		finder.fuzzySearch(text)
 	}
 }
 
-func (finder *Finder) fuzzySearch() {
+func (finder *Finder) fuzzySearch(text string) {
 	// Create new list with matches
-	text, _ := strings.CutSuffix(finder.searchTerm, " ")
+	text, _ = strings.CutSuffix(text, " ")
 	searchTerms := strings.FieldsFunc(text, func(r rune) bool { return r == ' ' || r == '/' })
 	startHighlightMarker := "[red::b]"
 	endHighlightMarker := "[-::-]"
@@ -283,6 +279,7 @@ func (finder *Finder) fuzzySearch() {
 	default:
 		// If channel is full, skip this update
 	}
+	finder.searchTerm = text
 }
 
 func (finder *Finder) RemoveContentFromDisplayName() {
@@ -301,6 +298,7 @@ func (finder *Finder) resetFileList(showContent bool) error {
 	}
 	finder.fileList = fileList
 	helper.CopyListContent(finder.fileList, finder.searchedList)
+	helper.CopyListContent(finder.searchedList, finder.previousSearchedList)
 	return nil
 }
 
@@ -318,7 +316,6 @@ func (finder *Finder) Root() tview.Primitive {
 func (finder *Finder) Draw() {
 	finder.rootFlex.Clear()
 	listFlex := tview.NewFlex()
-	finder.RemoveContentFromDisplayName()
 	listFlex.AddItem(finder.searchedList, 0, 1, true)
 	if finder.selectedList != nil {
 		listFlex.AddItem(tview.NewBox(), 2, 0, false)
@@ -380,6 +377,7 @@ func (finder *Finder) showRecentHistory() {
 		finder.fileList.InsertItem(0, line, line, 0, nil)
 	}
 	helper.CopyListContent(finder.fileList, finder.searchedList)
+	helper.CopyListContent(finder.searchedList, finder.previousSearchedList)
 	finder.searchInDirectory()
 }
 
@@ -388,5 +386,6 @@ func (finder *Finder) showGrep() {
 	finder.fileList.Clear()
 	finder.resetFileList(true)
 	helper.CopyListContent(finder.fileList, finder.searchedList)
+	helper.CopyListContent(finder.searchedList, finder.previousSearchedList)
 	finder.searchInDirectory()
 }
