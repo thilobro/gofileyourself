@@ -11,6 +11,8 @@ To install, please run:
 make install
 ```
 
+Requires `zoxide`.
+
 ## Run
 
 To start, please run:
