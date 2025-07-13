@@ -64,6 +64,9 @@ func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursiv
 	if !fileInfo.IsDir() {
 		return nil, nil
 	}
+	if !recursive {
+		exec.Command("zoxide", "add", path).Run()
+	}
 	list := tview.NewList().ShowSecondaryText(false)
 
 	var processDir func(dirPath string) error

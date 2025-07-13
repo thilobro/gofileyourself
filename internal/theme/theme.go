@@ -1,7 +1,6 @@
 package theme
 
 import (
-	"log"
 	"os"
 
 	"github.com/alecthomas/chroma"
@@ -100,14 +99,12 @@ func NewTheme(themePath *string) *Theme {
 }
 
 func GetThemeConfigFromPath(themePath *string) (*ThemeConfig, error) {
-	log.Println("themePath", *themePath)
 	themeFile, err := os.ReadFile(*themePath)
 	if err != nil {
 		return nil, err
 	}
 	var themeConfig ThemeConfig
 	if err := yaml.Unmarshal(themeFile, &themeConfig); err != nil {
-		log.Fatal(err)
 		panic(err)
 	}
 	return &themeConfig, nil
