@@ -205,19 +205,11 @@ func (finder *Finder) handleFooterInput() {
 	finder.footer.SetChangedFunc(
 		func(text string) {
 			defer finder.Draw()
-			if text == "/" {
-				helper.CopyListContent(finder.fileList, finder.searchedList)
-				finder.searchTerm = ""
-				finder.setCurrentLine(0)
-				return
-			}
-
 			currentInput := strings.TrimPrefix(text, "/")
 			go finder.manageFuzzySearch(currentInput)
 		},
 	)
 	finder.currentFocusedWidget = finder.footer
-	finder.Draw()
 }
 
 func (finder *Finder) manageFuzzySearch(text string) {
