@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -251,7 +250,6 @@ func (explorer *Explorer) setCurrentDirectory(path string) error {
 	currentDirectoryIndex := explorer.directoryToIndexMap[currentAbsolutePath]
 	newCurrentList, err := helper.LoadDirectory(currentAbsolutePath, explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
 	if err != nil {
-		log.Println("ERROR", err)
 		return err
 	}
 
@@ -323,16 +321,19 @@ func (explorer *Explorer) runFooterCommand(inputText string) {
 		parts := strings.Split(command, " ")
 		switch parts[0] {
 		case "cd":
-			log.Println("TEST")
 			cdArgs := append([]string{"query"}, parts[1:]...)
-			cmd := exec.Command("zoxide", cdArgs...)
-			log.Println(cdArgs)
-			out, _ := cmd.Output()
-			out = bytes.TrimFunc(out, func(r rune) bool {
-				return r <= 32 || r == 127 // Remove control characters
-			})
-			log.Println(string(out[:]))
-			explorer.setCurrentDirectory(string(out[:]))
+			var err error
+			if len(cdArgs) == 2 {
+				err = explorer.setCurrentDirectory(cdArgs[1])
+			}
+			if err != nil || len(cdArgs) >= 2 {
+				cmd := exec.Command("zoxide", cdArgs...)
+				out, _ := cmd.Output()
+				out = bytes.TrimFunc(out, func(r rune) bool {
+					return r <= 32 || r == 127 // Remove control characters
+				})
+				explorer.setCurrentDirectory(string(out[:]))
+			}
 		case "q":
 			explorer.context.App.Stop()
 		case "mkdir":

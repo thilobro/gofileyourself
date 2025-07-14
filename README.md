@@ -76,6 +76,7 @@ Commands:
 - `:rename <new name>` - Rename file
 - `:mrename` - Bulk rename marked files
 - `:touch <file>` - Create file
+- `:cd <path>` - Change path (`zoxide` supported)
 
 ### Finder
 
