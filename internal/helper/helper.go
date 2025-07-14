@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -56,8 +57,19 @@ func CopyFile(src string, dst string) error {
 
 // LoadDirectory is a helper function that loads directory contents into a list
 func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursive bool, markedItems []string) (*tview.List, error) {
+	log.Println(path)
+	absPath, _ := filepath.Abs(path)
+	log.Println(absPath)
+	if string(path) == "/home/thilo/repos/dotfiles" {
+		log.Println("SAME")
+	}
+	if absPath == "/home/thilo/repos/dotfiles" {
+		log.Println("SAME ABS")
+	}
 	fileInfo, err := os.Stat(path)
 	if err != nil {
+		log.Println(path)
+		log.Println("LOAD ERROR", err)
 		return nil, err
 	}
 

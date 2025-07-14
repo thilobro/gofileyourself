@@ -2,8 +2,10 @@ package explorer
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -318,6 +320,20 @@ func (explorer *Explorer) runFooterCommand(inputText string) {
 		explorer.context.RecentCommands = helper.AppendStringToUniqueList(explorer.context.RecentCommands, command)
 		parts := strings.Split(command, " ")
 		switch parts[0] {
+		case "cd":
+			cdArgs := append([]string{"query"}, parts[1:]...)
+			var err error
+			if len(cdArgs) == 2 {
+				err = explorer.setCurrentDirectory(cdArgs[1])
+			}
+			if err != nil || len(cdArgs) >= 2 {
+				cmd := exec.Command("zoxide", cdArgs...)
+				out, _ := cmd.Output()
+				out = bytes.TrimFunc(out, func(r rune) bool {
+					return r <= 32 || r == 127 // Remove control characters
+				})
+				explorer.setCurrentDirectory(string(out[:]))
+			}
 		case "q":
 			explorer.context.App.Stop()
 		case "mkdir":
