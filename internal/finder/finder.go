@@ -266,30 +266,6 @@ func (finder *Finder) Run() error {
 	return finder.context.App.SetRoot(finder.Root(), true).Run()
 }
 
-func (finder *Finder) applyTheme() {
-	theme := finder.context.Theme
-
-	// Set global background through root flex
-	finder.rootFlex.SetBackgroundColor(theme.Bg0)
-
-	// Style the lists
-	finder.searchedList.
-		SetMainTextColor(theme.Fg1).
-		SetSelectedTextColor(theme.Palette8).
-		SetSelectedBackgroundColor(theme.Palette6).
-		SetBackgroundColor(theme.Bg0)
-
-	// Style the footer
-	if finder.footer != nil {
-		finder.footer.
-			SetFieldBackgroundColor(theme.Bg1).
-			SetFieldTextColor(theme.Fg0).
-			SetBackgroundColor(theme.Bg0).
-			SetBorder(true).SetTitle(finder.title).Blur()
-	}
-}
-
-// GetInputCapture returns the input capture function for the finder
 func (finder *Finder) GetInputCapture() func(*tcell.EventKey) *tcell.EventKey {
 	return finder.rootFlex.GetInputCapture()
 }
