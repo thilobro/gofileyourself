@@ -82,7 +82,6 @@ func (finder *Finder) handleListUpdates() {
 }
 
 func (finder *Finder) setCurrentLine(lineIndex int) error {
-	defer finder.Draw()
 	if lineIndex < 0 {
 		lineIndex = 0
 	}
@@ -296,7 +295,6 @@ func (finder *Finder) resetFileList(showContent bool) error {
 
 func (finder *Finder) searchInDirectory() error {
 	finder.setCurrentLine(0)
-	finder.Draw()
 	finder.handleFooterInput()
 	return nil
 }

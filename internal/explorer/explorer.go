@@ -141,7 +141,6 @@ func NewExplorer(context *widget.Context) (*Explorer, error) {
 	return explorer, nil
 }
 
-// initialize sets up the initial state of the Explorer
 func (explorer *Explorer) initialize() error {
 	explorer.SetupKeyBindings()
 	if explorer.context.SelectedFilePath != nil {
@@ -153,12 +152,10 @@ func (explorer *Explorer) initialize() error {
 		explorer.setCurrentDirectory(explorer.context.CurrentPath)
 	}
 	explorer.currentFocusedWidget = explorer.currentList
-	explorer.setLastDirectory()
 	explorer.Draw()
 	return nil
 }
 
-// draw updates the UI
 func (explorer *Explorer) Draw() {
 	explorer.listFlex.Clear()
 	if explorer.parentList != nil {
@@ -431,12 +428,12 @@ func (explorer *Explorer) handleFooterInput(prompt string) {
 	})
 	explorer.footer.SetDoneFunc(
 		func(key tcell.Key) {
+			defer explorer.Draw()
 			if key == tcell.KeyEnter {
 				inputText := explorer.footer.GetText()
 				explorer.runFooterCommand(inputText)
 				explorer.currentFocusedWidget = explorer.currentList
 			}
-			explorer.Draw()
 			explorer.isFooterActive = false
 		},
 	)
@@ -449,7 +446,6 @@ func (explorer *Explorer) handleFooterInput(prompt string) {
 		},
 	)
 	explorer.currentFocusedWidget = explorer.footer
-	explorer.Draw()
 }
 
 func (explorer *Explorer) setLastDirectory() error {
@@ -636,7 +632,6 @@ func (explorer *Explorer) cycleRecentlyVisited(isBackward bool) {
 	explorer.setCurrentLine(helper.FindExactItem(explorer.currentList, filepath.Base(recentFile)))
 }
 
-// setupKeyBindings configures keyboard input handling
 func (explorer *Explorer) SetupKeyBindings() {
 	explorer.currentList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		defer explorer.Draw()
