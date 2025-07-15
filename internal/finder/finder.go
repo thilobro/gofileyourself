@@ -244,7 +244,7 @@ func (finder *Finder) fuzzySearch(text string) {
 	for _, searchTerm := range searchTerms {
 		for i := 0; i < itemCount; i++ {
 			primaryText, _ := finder.fileList.GetItemText(i)
-			idxs := gostring.IndexAll(primaryText, searchTerm, -1)
+			idxs := gostring.IndexAllIgnoreCase(primaryText, searchTerm, -1)
 			if val, exists := indeces[i]; !exists {
 				indeces[i] = idxs
 			} else {

@@ -105,7 +105,7 @@ func (explorer *Explorer) highlightSearchInput() {
 		endHighlightMarker := "[-::-]"
 		displayNameWithoutHighlight := strings.Replace(displayName, startHighlightMarker, "", -1)
 		displayNameWithoutHighlight = strings.Replace(displayNameWithoutHighlight, endHighlightMarker, "", -1)
-		indeces := gostring.IndexAll(displayNameWithoutHighlight, explorer.searchInput, -1)
+		indeces := gostring.IndexAllIgnoreCase(displayNameWithoutHighlight, explorer.searchInput, -1)
 		explorer.currentList.SetItemText(i, gostring.HighlightString(displayNameWithoutHighlight, indeces, startHighlightMarker, endHighlightMarker), text)
 	}
 }
