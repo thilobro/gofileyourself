@@ -34,7 +34,7 @@ func main() {
 	}
 
 	if *debug {
-		logFile, err := os.OpenFile("debug.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o666)
+		logFile, err := os.OpenFile(".debug.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o666)
 		if err != nil {
 			log.Fatalf("Error opening log file: %v", err)
 		}
