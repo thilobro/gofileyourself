@@ -1,11 +1,11 @@
 package helper
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -57,19 +57,9 @@ func CopyFile(src string, dst string) error {
 
 // LoadDirectory is a helper function that loads directory contents into a list
 func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursive bool, markedItems []string) (*tview.List, error) {
-	log.Println(path)
 	absPath, _ := filepath.Abs(path)
-	log.Println(absPath)
-	if string(path) == "/home/thilo/repos/dotfiles" {
-		log.Println("SAME")
-	}
-	if absPath == "/home/thilo/repos/dotfiles" {
-		log.Println("SAME ABS")
-	}
 	fileInfo, err := os.Stat(path)
 	if err != nil {
-		log.Println(path)
-		log.Println("LOAD ERROR", err)
 		return nil, err
 	}
 
@@ -235,20 +225,58 @@ func LoadFilePreview(path string, searchTerm *string) (*tview.TextView, error) {
 		if searchTerm != nil {
 			terms := strings.Split(*searchTerm, " ")
 			for _, term := range terms {
-				pattern := regexp.MustCompile("(?i)" + regexp.QuoteMeta(term))
-				formattedContent = pattern.ReplaceAllString(formattedContent, "[\"hlrg\"]${0}[\"\"]")
+				pattern := regexp.MustCompile(`(?i)(\[#.*?\])|(` + regexp.QuoteMeta(term) + `)`)
+				formattedContent = pattern.ReplaceAllStringFunc(formattedContent, func(match string) string {
+					// The `match` variable is the substring that the regex found.
+					// It will either be "[#...]" or your search term "en".
+
+					// We check if the match is the part we want to IGNORE.
+					// A simple check is to see if it starts with "[#".
+					if strings.HasPrefix(match, "[#") {
+						// If it's the excluded block, return it completely unchanged.
+						return match
+					} else {
+						// Otherwise, it's the term we want to highlight.
+						// Surround it with your desired markers.
+						return `["hlrg"]` + match + `[""]`
+					}
+				})
 			}
 		}
 		textView.SetText(formattedContent)
 		if searchTerm != nil {
+			firstLine, _ := findLineNumberScanner(formattedContent, "hlrg")
 			textView.SetRegions(true)
 			textView.Highlight("hlrg")
-			textView.ScrollToHighlight()
+			_, _, _, height := textView.GetInnerRect()
+			if firstLine >= height/2 {
+				textView.ScrollToHighlight()
+			}
 		}
 		return textView, nil
 	}
 	textView.SetText("[gray::]No preview...[-::]")
 	return textView, nil
+}
+
+func findLineNumberScanner(content, substring string) (int, error) {
+	scanner := bufio.NewScanner(strings.NewReader(content))
+
+	lineNumber := 1
+	for scanner.Scan() { // .Scan() advances to the next line
+		if strings.Contains(scanner.Text(), substring) {
+			return lineNumber, nil
+		}
+		lineNumber++
+	}
+
+	// Check for errors during scanning (e.g., if the token is too long)
+	if err := scanner.Err(); err != nil {
+		return 0, err
+	}
+
+	// If we get here, the substring was not found
+	return 0, fmt.Errorf("substring %q not found", substring)
 }
 
 // OpenInNvim is a helper function that opens a file in neovim
