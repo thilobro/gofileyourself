@@ -327,6 +327,7 @@ func (explorer *Explorer) handleFooterInput(prompt string) {
 				explorer.cycleRecentCommandsIdx, command = explorer.cycleRecentCommands(true)
 				if command != "" {
 					currentText = ":" + command
+					explorer.footer.SetText(currentText)
 				} else {
 					return nil
 				}
@@ -338,6 +339,7 @@ func (explorer *Explorer) handleFooterInput(prompt string) {
 				explorer.cycleRecentSearchesIdx, search = explorer.cycleRecentSearches(false)
 				if search != "" {
 					currentText = "/" + search
+					explorer.footer.SetText(currentText)
 				} else {
 					return nil
 				}
@@ -346,24 +348,13 @@ func (explorer *Explorer) handleFooterInput(prompt string) {
 				explorer.cycleRecentCommandsIdx, command = explorer.cycleRecentCommands(false)
 				if command != "" {
 					currentText = ":" + command
+					explorer.footer.SetText(currentText)
 				} else {
 					return nil
 				}
 			}
 		}
-		if event.Key() == tcell.KeyBackspace2 {
-			currentTextLen := len(currentText)
-			if currentTextLen <= 1 {
-				return nil
-			}
-			currentText = currentText[:currentTextLen-1]
-		} else if event.Key() == tcell.KeyEnter {
-			return event
-		} else {
-			currentText = currentText + string(event.Rune())
-		}
-		explorer.footer.SetText(currentText)
-		return nil
+		return event
 	})
 	explorer.footer.SetDoneFunc(
 		func(key tcell.Key) {
