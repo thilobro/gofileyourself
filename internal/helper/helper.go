@@ -606,7 +606,7 @@ func ShortenPathsIfNecessary(pathList *tview.List, maxPathLen int) {
 					}
 					shortDisplayName = shortDisplayName + "/" + part
 				}
-				shortDisplayName = shortDisplayName + parts[len(parts)-1]
+				shortDisplayName = shortDisplayName + "/" + parts[len(parts)-1]
 			}
 			pathList.SetItemText(i, shortDisplayName, secondaryText)
 		}
