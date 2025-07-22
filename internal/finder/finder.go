@@ -7,6 +7,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/thilobro/gofileyourself/internal/helper"
 	"github.com/thilobro/gofileyourself/internal/widget"
@@ -28,14 +29,17 @@ type Finder struct {
 	searchTerm           string
 	fuzzySearchQuit      chan bool
 	listUpdateChan       chan *tview.List // Channel for list updates
+	listUpdateMutex      sync.Mutex
 	title                string
 }
 
 func (finder *Finder) setDrawFunc() {
 	finder.searchedList.SetDrawFunc(func(screen tcell.Screen, x int, y int, width int, height int) (int, int, int, int) {
+		finder.listUpdateMutex.Lock()
 		helper.CopyListContent(finder.previousSearchedList, finder.searchedList)
 		finder.RemoveContentFromDisplayName()
 		helper.ShortenPathsIfNecessary(finder.searchedList, width)
+		finder.listUpdateMutex.Unlock()
 		return x, y, width, height
 	})
 }
@@ -72,8 +76,10 @@ func NewFinder(context *widget.Context) (*Finder, error) {
 
 func (finder *Finder) handleListUpdates() {
 	for newList := range finder.listUpdateChan {
+		finder.listUpdateMutex.Lock()
 		helper.CopyListContent(newList, finder.searchedList)
 		helper.CopyListContent(finder.searchedList, finder.previousSearchedList)
+		finder.listUpdateMutex.Unlock()
 		finder.context.App.QueueUpdateDraw(func() {
 			finder.setCurrentLine(0)
 			finder.Draw()
@@ -219,6 +225,9 @@ func (finder *Finder) RemoveContentFromDisplayName() {
 	for i := 0; i < finder.searchedList.GetItemCount(); i++ {
 		displayName, secondaryText := finder.searchedList.GetItemText(i)
 		displayName = strings.Split(displayName, " >>> ")[0]
+		if i >= finder.searchedList.GetItemCount() {
+			return
+		}
 		finder.searchedList.SetItemText(i, displayName, secondaryText)
 	}
 }
