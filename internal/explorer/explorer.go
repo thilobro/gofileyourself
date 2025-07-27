@@ -115,7 +115,7 @@ func (explorer *Explorer) Draw() {
 	}
 	explorer.rootFlex.AddItem(explorer.listFlex, 0, 1, true)
 	if explorer.footer != nil {
-		explorer.rootFlex.AddItem(explorer.footer, 1, 0, false)
+		explorer.rootFlex.AddItem(explorer.footer, 3, 0, false)
 	}
 	explorer.context.App.SetRoot(explorer.rootFlex, true)
 	explorer.context.App.SetFocus(explorer.currentFocusedWidget)

@@ -63,7 +63,6 @@ func (finder *Finder) SetupKeyBindings() {
 		if event = finder.handleKeys(event); event == nil {
 			return nil
 		}
-		finder.footer.GetInputCapture()(event)
-		return nil
+		return finder.footer.GetInputCapture()(event)
 	})
 }

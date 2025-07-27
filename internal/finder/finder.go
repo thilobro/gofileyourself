@@ -135,18 +135,7 @@ func (finder *Finder) setSelectedDirectory(selectedPath string) error {
 func (finder *Finder) handleFooterInput() {
 	finder.footer = tview.NewInputField().SetText("/")
 	finder.footer.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		currentText := finder.footer.GetText()
-		if event.Key() == tcell.KeyBackspace2 {
-			currentTextLen := len(currentText)
-			if currentTextLen <= 1 {
-				return nil
-			}
-			currentText = currentText[:currentTextLen-1]
-		} else {
-			currentText = currentText + string(event.Rune())
-		}
-		finder.footer.SetText(currentText)
-		return nil
+		return event
 	})
 	helper.CopyListContent(finder.fileList, finder.searchedList)
 	finder.footer.SetChangedFunc(
