@@ -19,6 +19,6 @@ func (finder *Finder) applyTheme() {
 			SetFieldBackgroundColor(theme.Bg1).
 			SetFieldTextColor(theme.Fg0).
 			SetBackgroundColor(theme.Bg0).
-			SetBorder(true).SetTitle(finder.title).Blur()
+			SetBorder(true).SetTitle(finder.title)
 	}
 }

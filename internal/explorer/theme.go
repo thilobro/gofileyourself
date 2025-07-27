@@ -49,7 +49,7 @@ func (explorer *Explorer) applyTheme() {
 		explorer.footer.
 			SetFieldBackgroundColor(theme.Bg1).
 			SetFieldTextColor(theme.Fg0).
-			SetBackgroundColor(theme.Bg0)
+			SetBackgroundColor(theme.Bg0).SetBorder(true)
 	}
 }
 
