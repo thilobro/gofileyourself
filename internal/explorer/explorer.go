@@ -179,7 +179,6 @@ func (explorer *Explorer) setParentDirectory(path string) error {
 	return nil
 }
 
-// setCurrentDirectory changes the current directory and updates related views
 func (explorer *Explorer) setCurrentDirectory(path string) error {
 	// Update current directory
 	currentAbsolutePath, _ := filepath.Abs(path)

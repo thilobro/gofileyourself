@@ -77,12 +77,6 @@ func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursiv
 		if err != nil {
 			return err
 		}
-		if len(files) == 0 {
-			if !recursive {
-				list.AddItem("Directory is empty...", "", 0, nil)
-			}
-			return nil
-		}
 
 		fileSlice := make([]os.DirEntry, 0)
 		for _, file := range files {
@@ -93,6 +87,12 @@ func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursiv
 			if IsInterestingFile(fileName) {
 				fileSlice = append(fileSlice, file)
 			}
+		}
+		if len(fileSlice) == 0 {
+			if !recursive {
+				list.AddItem("Directory is empty...", "", 0, nil)
+			}
+			return nil
 		}
 
 		// Sort: directories first, then alphabetically
