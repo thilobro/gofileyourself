@@ -318,6 +318,7 @@ func (explorer *Explorer) handleFooterInput(prompt string) {
 				explorer.cycleRecentSearchesIdx, search = explorer.cycleRecentSearches(true)
 				if search != "" {
 					currentText = "/" + search
+					explorer.footer.SetText(currentText)
 				} else {
 					return nil
 				}
