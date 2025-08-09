@@ -259,7 +259,7 @@ func (explorer *Explorer) runFooterCommand(inputText string) {
 			cdArgs := append([]string{"query"}, parts[1:]...)
 			var err error
 			if len(cdArgs) == 1 {
-				explorer.footer.SetText("[Error] Not enough arguments for command '" + command + "'")
+				explorer.setTooFewArgumentsError(command)
 			}
 			if len(cdArgs) == 2 {
 				err = explorer.setCurrentDirectory(cdArgs[1])
@@ -279,14 +279,18 @@ func (explorer *Explorer) runFooterCommand(inputText string) {
 		case "q":
 			explorer.context.App.Stop()
 		case "mkdir":
-			if len(parts) == 2 {
+			if len(parts) == 1 {
+				explorer.setTooFewArgumentsError(command)
+			} else if len(parts) == 2 {
 				helper.CreateDirectory(filepath.Join(explorer.context.CurrentPath, parts[1]))
 				explorer.setCurrentDirectory(explorer.context.CurrentPath)
 			} else {
 				explorer.setTooManyArgumentsError(command)
 			}
 		case "rename":
-			if len(parts) == 2 {
+			if len(parts) == 1 {
+				explorer.setTooFewArgumentsError(command)
+			} else if len(parts) == 2 {
 				_, currentName := explorer.currentList.GetItemText(explorer.currentList.GetCurrentItem())
 				currentPath := filepath.Join(explorer.context.CurrentPath, currentName)
 				newPath := filepath.Join(explorer.context.CurrentPath, parts[1])
@@ -298,7 +302,9 @@ func (explorer *Explorer) runFooterCommand(inputText string) {
 		case "mrename":
 			explorer.renameMarkedFiles()
 		case "touch":
-			if len(parts) == 2 {
+			if len(parts) == 1 {
+				explorer.setTooFewArgumentsError(command)
+			} else if len(parts) == 2 {
 				helper.TouchFile(filepath.Join(explorer.context.CurrentPath, parts[1]))
 				explorer.setCurrentDirectory(explorer.context.CurrentPath)
 			} else {
@@ -313,6 +319,10 @@ func (explorer *Explorer) runFooterCommand(inputText string) {
 
 func (explorer *Explorer) setTooManyArgumentsError(command string) {
 	explorer.footer.SetText("[Error] Too many arguments for command '" + command + "'")
+}
+
+func (explorer *Explorer) setTooFewArgumentsError(command string) {
+	explorer.footer.SetText("[Error] Not enough arguments for command '" + command + "'")
 }
 
 func (explorer *Explorer) cycleRecentSearches(backwards bool) (int, string) {
