@@ -267,7 +267,11 @@ func (explorer *Explorer) runFooterCommand(inputText string) {
 				out = bytes.TrimFunc(out, func(r rune) bool {
 					return r <= 32 || r == 127 // Remove control characters
 				})
-				explorer.setCurrentDirectory(string(out[:]))
+				if string(out) == "" {
+					explorer.footer.SetText("[Error] No matching directory for '" + strings.Join(cdArgs[1:], " ") + "'")
+				} else {
+					explorer.setCurrentDirectory(string(out[:]))
+				}
 			}
 		case "q":
 			explorer.context.App.Stop()
@@ -291,6 +295,8 @@ func (explorer *Explorer) runFooterCommand(inputText string) {
 				helper.TouchFile(filepath.Join(explorer.context.CurrentPath, parts[1]))
 				explorer.setCurrentDirectory(explorer.context.CurrentPath)
 			}
+		default:
+			explorer.footer.SetText("[Error] Command '" + command + "' not found")
 		}
 	}
 	explorer.currentFocusedWidget = explorer.currentList
