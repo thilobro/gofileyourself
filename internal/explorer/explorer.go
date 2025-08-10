@@ -255,14 +255,6 @@ func (explorer *Explorer) runFooterCommand(inputText string) {
 	explorer.currentFocusedWidget = explorer.currentList
 }
 
-func (explorer *Explorer) setTooManyArgumentsError(command string) {
-	explorer.footer.SetText("[Error] Too many arguments for command '" + command + "'")
-}
-
-func (explorer *Explorer) setTooFewArgumentsError(command string) {
-	explorer.footer.SetText("[Error] Not enough arguments for command '" + command + "'")
-}
-
 func (explorer *Explorer) cycleRecentSearches(backwards bool) (int, string) {
 	return helper.CycleRecentList(explorer.context.RecentSearches, explorer.cycleRecentSearchesIdx, backwards)
 }
