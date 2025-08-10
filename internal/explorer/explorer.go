@@ -2,10 +2,8 @@ package explorer
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -252,67 +250,7 @@ func (explorer *Explorer) runFooterCommand(inputText string) {
 		}
 	case ':':
 		command := inputText[1:]
-		explorer.context.RecentCommands = helper.AppendStringToUniqueList(explorer.context.RecentCommands, command)
-		parts := strings.Split(command, " ")
-		switch parts[0] {
-		case "cd":
-			cdArgs := append([]string{"query"}, parts[1:]...)
-			var err error
-			if len(cdArgs) == 1 {
-				explorer.setTooFewArgumentsError(command)
-			}
-			if len(cdArgs) == 2 {
-				err = explorer.setCurrentDirectory(cdArgs[1])
-			}
-			if err != nil || len(cdArgs) >= 2 {
-				cmd := exec.Command("zoxide", cdArgs...)
-				out, _ := cmd.Output()
-				out = bytes.TrimFunc(out, func(r rune) bool {
-					return r <= 32 || r == 127 // Remove control characters
-				})
-				if string(out) == "" {
-					explorer.footer.SetText("[Error] No matching directory for '" + strings.Join(cdArgs[1:], " ") + "'")
-				} else {
-					explorer.setCurrentDirectory(string(out[:]))
-				}
-			}
-		case "q":
-			explorer.context.App.Stop()
-		case "mkdir":
-			if len(parts) == 1 {
-				explorer.setTooFewArgumentsError(command)
-			} else if len(parts) == 2 {
-				helper.CreateDirectory(filepath.Join(explorer.context.CurrentPath, parts[1]))
-				explorer.setCurrentDirectory(explorer.context.CurrentPath)
-			} else {
-				explorer.setTooManyArgumentsError(command)
-			}
-		case "rename":
-			if len(parts) == 1 {
-				explorer.setTooFewArgumentsError(command)
-			} else if len(parts) == 2 {
-				_, currentName := explorer.currentList.GetItemText(explorer.currentList.GetCurrentItem())
-				currentPath := filepath.Join(explorer.context.CurrentPath, currentName)
-				newPath := filepath.Join(explorer.context.CurrentPath, parts[1])
-				helper.RenameFile(currentPath, newPath)
-				explorer.setCurrentDirectory(explorer.context.CurrentPath)
-			} else {
-				explorer.setTooManyArgumentsError(command)
-			}
-		case "mrename":
-			explorer.renameMarkedFiles()
-		case "touch":
-			if len(parts) == 1 {
-				explorer.setTooFewArgumentsError(command)
-			} else if len(parts) == 2 {
-				helper.TouchFile(filepath.Join(explorer.context.CurrentPath, parts[1]))
-				explorer.setCurrentDirectory(explorer.context.CurrentPath)
-			} else {
-				explorer.setTooManyArgumentsError(command)
-			}
-		default:
-			explorer.footer.SetText("[Error] Command '" + command + "' not found")
-		}
+		explorer.runCommand(command)
 	}
 	explorer.currentFocusedWidget = explorer.currentList
 }
