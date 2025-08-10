@@ -44,7 +44,9 @@ func (explorer *Explorer) runQCommand(parts []string) error {
 }
 
 func (explorer *Explorer) runMkDirCommand(parts []string) error {
-	helper.CreateDirectory(filepath.Join(explorer.context.CurrentPath, parts[0]))
+	for _, dirName := range parts {
+		helper.CreateDirectory(filepath.Join(explorer.context.CurrentPath, dirName))
+	}
 	explorer.setCurrentDirectory(explorer.context.CurrentPath)
 	return nil
 }
@@ -59,7 +61,9 @@ func (explorer *Explorer) runRenameCommand(parts []string) error {
 }
 
 func (explorer *Explorer) runTouchCommand(parts []string) error {
-	helper.TouchFile(filepath.Join(explorer.context.CurrentPath, parts[0]))
+	for _, fileName := range parts {
+		helper.TouchFile(filepath.Join(explorer.context.CurrentPath, fileName))
+	}
 	explorer.setCurrentDirectory(explorer.context.CurrentPath)
 	return nil
 }
@@ -79,13 +83,13 @@ func (explorer *Explorer) runCommand(command string) {
 	case "q":
 		err = commandWrapper(explorer.runQCommand, command, 0, 0)
 	case "mkdir":
-		err = commandWrapper(explorer.runMkDirCommand, command, 1, 1)
+		err = commandWrapper(explorer.runMkDirCommand, command, 1, -1)
 	case "rename":
 		err = commandWrapper(explorer.runRenameCommand, command, 1, 1)
 	case "mrename":
 		err = commandWrapper(explorer.runMRenameCommand, command, 0, 0)
 	case "touch":
-		err = commandWrapper(explorer.runTouchCommand, command, 1, 1)
+		err = commandWrapper(explorer.runTouchCommand, command, 1, -1)
 	}
 	if err != nil {
 		explorer.footer.SetText(err.Error())
