@@ -79,7 +79,7 @@ func (explorer *Explorer) runCommand(command string) {
 	err := errors.New("[Error] Command '" + command + "' not found")
 	switch parts[0] {
 	case "cd":
-		err = commandWrapper(explorer.runCdCommand, command, 1, 1)
+		err = commandWrapper(explorer.runCdCommand, command, 1, -1)
 	case "q":
 		err = commandWrapper(explorer.runQCommand, command, 0, 0)
 	case "mkdir":

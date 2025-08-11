@@ -214,15 +214,15 @@ func (explorer *Explorer) handleSingleKey(event *tcell.EventKey) *tcell.EventKey
 func (explorer *Explorer) SetupKeyBindings() {
 	explorer.currentList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		defer explorer.Draw()
+		if event = explorer.handleSingleKey(event); event == nil {
+			return nil
+		}
 		if event = explorer.handleKeyCombinations(event); event == nil {
 			return nil
 		}
 		if event = explorer.handleMultipleKey(event); event == nil {
 			return nil
 		}
-		if event = explorer.handleSingleKey(event); event == nil {
-			return nil
-		}
-		return event
+		return nil
 	})
 }
