@@ -84,7 +84,7 @@ func (explorer *Explorer) initialize() error {
 		explorer.context.CurrentPath = filepath.Dir(*explorer.context.SelectedFilePath)
 		explorer.setCurrentDirectory(explorer.context.CurrentPath)
 		selectedFileIndex := helper.FindExactItem(explorer.currentList, filepath.Base(*explorer.context.SelectedFilePath))
-		explorer.currentList.SetCurrentItem(selectedFileIndex)
+		explorer.setCurrentLine(selectedFileIndex)
 	} else {
 		explorer.setCurrentDirectory(explorer.context.CurrentPath)
 	}
