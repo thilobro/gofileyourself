@@ -12,6 +12,7 @@ import (
 	"github.com/thilobro/gofileyourself/internal/widget"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/go-git/go-git/v5"
 	"github.com/rivo/tview"
 )
 
@@ -202,8 +203,17 @@ func (explorer *Explorer) setCurrentDirectory(path string) error {
 		return err
 	}
 
+	headerString := currentAbsolutePath
+	// Get git infos
+	r, err := git.PlainOpen(path)
+	if err == nil {
+		h, _ := r.Head()
+		currentBranchName := strings.SplitAfter(h.Name().String(), "heads/")
+		headerString = currentAbsolutePath + " (" + currentBranchName[1] + ")"
+	}
+
 	// Update header
-	explorer.setHeader(currentAbsolutePath)
+	explorer.setHeader(headerString)
 
 	explorer.searchInCurrentDirectory()
 	explorer.context.CurrentPath = currentAbsolutePath
