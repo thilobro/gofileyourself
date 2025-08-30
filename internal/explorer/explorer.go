@@ -205,11 +205,16 @@ func (explorer *Explorer) setCurrentDirectory(path string) error {
 
 	headerString := currentAbsolutePath
 	// Get git infos
-	r, err := git.PlainOpen(path)
+	repository, err := git.PlainOpenWithOptions(path, &git.PlainOpenOptions{DetectDotGit: true})
 	if err == nil {
-		h, _ := r.Head()
-		currentBranchName := strings.SplitAfter(h.Name().String(), "heads/")
-		headerString = currentAbsolutePath + " (" + currentBranchName[1] + ")"
+		head, _ := repository.Head()
+		worktree, _ := repository.Worktree()
+		status, _ := worktree.Status()
+		currentBranchName := strings.SplitAfter(head.Name().String(), "heads/")[1]
+		if status.IsClean() != true {
+			currentBranchName = currentBranchName + "*"
+		}
+		headerString = currentAbsolutePath + " (" + currentBranchName + ")"
 	}
 
 	// Update header
