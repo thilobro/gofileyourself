@@ -13,7 +13,7 @@ import (
 
 func (explorer *Explorer) handleKeyCombinations(event *tcell.EventKey) *tcell.EventKey {
 	switch event.Key() {
-	case tcell.KeyCtrlH:
+	case tcell.KeyCtrlS:
 		explorer.context.ShowHiddenFiles = !explorer.context.ShowHiddenFiles
 
 		// Remember current selection before refresh

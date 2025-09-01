@@ -37,7 +37,7 @@ Flags:
 
 Keys:
 
-- `Ctrl-H` - Toggle hidden files
+- `Ctrl-S` - Toggle hidden files
 - `Ctrl-C` - Quit
 - `Ctrl-F` - Open finder
 - `Ctrl-R` - Open finder for recently opened files
