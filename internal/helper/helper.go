@@ -19,7 +19,6 @@ import (
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/lexers"
 	"github.com/alecthomas/chroma/styles"
-	"github.com/go-git/go-git/v5"
 	"github.com/otiai10/copy"
 	"github.com/rivo/tview"
 )
@@ -137,20 +136,6 @@ func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursiv
 				displayName += "x "
 			}
 
-			repository, err := git.PlainOpenWithOptions(
-				dirPath, &git.PlainOpenOptions{DetectDotGit: true})
-			if err == nil {
-				worktree, _ := repository.Worktree()
-				status, _ := worktree.StatusWithOptions(git.StatusOptions{Strategy: 1})
-				repoPath := worktree.Filesystem.Root()
-				relPath, _ := filepath.Rel(repoPath, absPath)
-				fileStatus, ok := status[relPath]
-				if ok {
-					if fileStatus.Worktree != ' ' {
-						displayName += "*"
-					}
-				}
-			}
 			if showContent && IsInterestingFile(absPath) && IsTextFile(absPath) {
 				content, _ := os.ReadFile(absPath)
 				displayName += " >>> " + string(content)
