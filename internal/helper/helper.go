@@ -133,7 +133,7 @@ func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursiv
 					}
 				}
 			} else if info.Mode()&0o111 != 0 {
-				displayName += "x "
+				displayName = "x " + displayName
 			}
 
 			if showContent && IsInterestingFile(absPath) && IsTextFile(absPath) {
