@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/go-git/go-git/v5"
 	"github.com/thilobro/gofileyourself/internal/helper"
 	"github.com/thilobro/gofileyourself/internal/widget"
 
@@ -90,7 +89,6 @@ func (explorer *Explorer) initialize() error {
 		explorer.setCurrentDirectory(explorer.context.CurrentPath)
 	}
 	explorer.currentFocusedWidget = explorer.currentList
-	explorer.header.SetDynamicColors(true)
 	explorer.Draw()
 	return nil
 }
@@ -131,54 +129,30 @@ func (explorer *Explorer) GetInputCapture() func(*tcell.EventKey) *tcell.EventKe
 }
 
 // setSelectedDirectory updates the selected directory/file preview
-func (explorer *Explorer) setSelectedDirectory(selectedPath string) {
-	f := func() {
-		selectedAbsolutePath, _ := filepath.Abs(selectedPath)
-		isDirEmpty, _ := helper.IsDirectoryEmpty(selectedAbsolutePath)
-		if isDirEmpty {
-			explorer.selectedList = tview.NewTextArea().SetText("Directory is empty...", false)
-		}
-		selectedDirectoryIndex := explorer.directoryToIndexMap[selectedAbsolutePath]
-
-		newSelectedList, _ := helper.LoadDirectory(selectedPath, explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
-
-		if newSelectedList == nil {
-			explorer.selectedList, _ = helper.LoadFilePreview(selectedPath, nil)
-		} else {
-			newSelectedList.SetCurrentItem(selectedDirectoryIndex)
-			helper.LoadGitMarkers(selectedPath, newSelectedList)
-			explorer.selectedList = newSelectedList
-		}
-		explorer.Draw()
+func (explorer *Explorer) setSelectedDirectory(selectedPath string) error {
+	selectedAbsolutePath, _ := filepath.Abs(selectedPath)
+	isDirEmpty, _ := helper.IsDirectoryEmpty(selectedAbsolutePath)
+	if isDirEmpty {
+		explorer.selectedList = tview.NewTextArea().SetText("Directory is empty...", false)
+		return nil
 	}
-	go explorer.context.App.QueueUpdateDraw(f)
-}
+	selectedDirectoryIndex := explorer.directoryToIndexMap[selectedAbsolutePath]
 
-func (explorer *Explorer) asyncLoadGitMarkers(path string, list *tview.List) {
-	f := func() {
-		helper.LoadGitMarkers(path, list)
+	newSelectedList, err := helper.LoadDirectory(selectedPath, explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
+	if err != nil {
+		return err
 	}
-	go explorer.context.App.QueueUpdateDraw(f)
-}
 
-func (explorer *Explorer) asyncLoadGitHeader(header string) {
-	f := func() {
-		// Get git infos
-		repository, err := git.PlainOpenWithOptions(header, &git.PlainOpenOptions{DetectDotGit: true})
-		if err == nil {
-			head, _ := repository.Head()
-			worktree, _ := repository.Worktree()
-			status, _ := worktree.Status()
-			currentBranchName := strings.SplitAfter(head.Name().String(), "heads/")[1]
-			if status.IsClean() != true {
-				currentBranchName = currentBranchName + "[red]*[white]"
-			}
-			header = header + " (" + currentBranchName + ")"
-			explorer.setHeader(header)
-			explorer.Draw()
+	if newSelectedList == nil {
+		explorer.selectedList, err = helper.LoadFilePreview(selectedPath, nil)
+		if err != nil {
+			return err
 		}
+	} else {
+		newSelectedList.SetCurrentItem(selectedDirectoryIndex)
+		explorer.selectedList = newSelectedList
 	}
-	go explorer.context.App.QueueUpdateDraw(f)
+	return nil
 }
 
 func (explorer *Explorer) setParentDirectory(path string) error {
@@ -198,7 +172,6 @@ func (explorer *Explorer) setParentDirectory(path string) error {
 		parentAbsolutePath, _ := filepath.Abs(parentPath)
 		explorer.directoryToIndexMap[parentAbsolutePath] = parentDirectoryIndex
 		newParentList.SetCurrentItem(parentDirectoryIndex)
-		explorer.asyncLoadGitMarkers(parentPath, newParentList)
 		explorer.parentList = newParentList
 	}
 	return nil
@@ -209,7 +182,6 @@ func (explorer *Explorer) setCurrentDirectory(path string) error {
 	currentAbsolutePath, _ := filepath.Abs(path)
 	currentDirectoryIndex := explorer.directoryToIndexMap[currentAbsolutePath]
 	newCurrentList, err := helper.LoadDirectory(currentAbsolutePath, explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
-	explorer.asyncLoadGitMarkers(path, newCurrentList)
 	if err != nil {
 		return err
 	}
@@ -226,10 +198,14 @@ func (explorer *Explorer) setCurrentDirectory(path string) error {
 	// Update selected directory
 	_, selectedName := explorer.currentList.GetItemText(currentDirectoryIndex)
 	selectedPath := filepath.Join(currentAbsolutePath, selectedName)
-	explorer.setSelectedDirectory(selectedPath)
+	if err := explorer.setSelectedDirectory(selectedPath); err != nil {
+		return err
+	}
 
-	explorer.setHeader(currentAbsolutePath)
-	explorer.asyncLoadGitHeader(currentAbsolutePath)
+	headerString := currentAbsolutePath
+
+	// Update header
+	explorer.setHeader(headerString)
 
 	explorer.searchInCurrentDirectory()
 	explorer.context.CurrentPath = currentAbsolutePath
@@ -255,8 +231,7 @@ func (explorer *Explorer) setCurrentLine(lineIndex int) error {
 	explorer.directoryToIndexMap[currentAbsolutePath] = lineIndex
 
 	_, selectedName := explorer.currentList.GetItemText(lineIndex)
-	explorer.setSelectedDirectory(filepath.Join(explorer.context.CurrentPath, selectedName))
-	return nil
+	return explorer.setSelectedDirectory(filepath.Join(explorer.context.CurrentPath, selectedName))
 }
 
 func (explorer *Explorer) searchInCurrentDirectory() {

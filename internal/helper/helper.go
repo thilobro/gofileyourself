@@ -19,7 +19,6 @@ import (
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/lexers"
 	"github.com/alecthomas/chroma/styles"
-	"github.com/go-git/go-git/v5"
 	"github.com/otiai10/copy"
 	"github.com/rivo/tview"
 )
@@ -154,36 +153,6 @@ func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursiv
 	}
 
 	return list, nil
-}
-
-func LoadGitMarkers(path string, list *tview.List) {
-	repository, err := git.PlainOpenWithOptions(
-		path, &git.PlainOpenOptions{DetectDotGit: true})
-	var worktree *git.Worktree = nil
-	repoPath := ""
-	var status *git.Status = nil
-	if err == nil {
-		worktree, _ = repository.Worktree()
-		repoPath = worktree.Filesystem.Root()
-		fileStatus, _ := worktree.Status()
-		status = &fileStatus
-	}
-
-	itemCount := list.GetItemCount()
-	for i := 0; i < itemCount; i++ {
-		displayName, relPath := list.GetItemText(i)
-		if worktree != nil && repoPath != "" {
-			absPath := filepath.Join(path, relPath)
-			relToRepoPath, _ := filepath.Rel(repoPath, absPath)
-			fileStatus, ok := (*status)[relToRepoPath]
-			if ok {
-				if fileStatus.Worktree != ' ' {
-					displayName += "[red]*[:]"
-				}
-			}
-		}
-		list.SetItemText(i, displayName, relPath)
-	}
 }
 
 func IsTextFile(path string) bool {
