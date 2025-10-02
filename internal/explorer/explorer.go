@@ -90,7 +90,6 @@ func (explorer *Explorer) initialize() error {
 		explorer.setCurrentDirectory(explorer.context.CurrentPath)
 	}
 	explorer.currentFocusedWidget = explorer.currentList
-	explorer.header.SetDynamicColors(true)
 	explorer.Draw()
 	return nil
 }
@@ -131,26 +130,30 @@ func (explorer *Explorer) GetInputCapture() func(*tcell.EventKey) *tcell.EventKe
 }
 
 // setSelectedDirectory updates the selected directory/file preview
-func (explorer *Explorer) setSelectedDirectory(selectedPath string) {
-	f := func() {
-		selectedAbsolutePath, _ := filepath.Abs(selectedPath)
-		isDirEmpty, _ := helper.IsDirectoryEmpty(selectedAbsolutePath)
-		if isDirEmpty {
-			explorer.selectedList = tview.NewTextArea().SetText("Directory is empty...", false)
-		}
-		selectedDirectoryIndex := explorer.directoryToIndexMap[selectedAbsolutePath]
-
-		newSelectedList, _ := helper.LoadDirectory(selectedPath, explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
-
-		if newSelectedList == nil {
-			explorer.selectedList, _ = helper.LoadFilePreview(selectedPath, nil)
-		} else {
-			newSelectedList.SetCurrentItem(selectedDirectoryIndex)
-			explorer.selectedList = newSelectedList
-		}
-		explorer.Draw()
+func (explorer *Explorer) setSelectedDirectory(selectedPath string) error {
+	selectedAbsolutePath, _ := filepath.Abs(selectedPath)
+	isDirEmpty, _ := helper.IsDirectoryEmpty(selectedAbsolutePath)
+	if isDirEmpty {
+		explorer.selectedList = tview.NewTextArea().SetText("Directory is empty...", false)
+		return nil
 	}
-	go explorer.context.App.QueueUpdateDraw(f)
+	selectedDirectoryIndex := explorer.directoryToIndexMap[selectedAbsolutePath]
+
+	newSelectedList, err := helper.LoadDirectory(selectedPath, explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
+	if err != nil {
+		return err
+	}
+
+	if newSelectedList == nil {
+		explorer.selectedList, err = helper.LoadFilePreview(selectedPath, nil)
+		if err != nil {
+			return err
+		}
+	} else {
+		newSelectedList.SetCurrentItem(selectedDirectoryIndex)
+		explorer.selectedList = newSelectedList
+	}
+	return nil
 }
 
 func (explorer *Explorer) setParentDirectory(path string) error {
@@ -196,7 +199,9 @@ func (explorer *Explorer) setCurrentDirectory(path string) error {
 	// Update selected directory
 	_, selectedName := explorer.currentList.GetItemText(currentDirectoryIndex)
 	selectedPath := filepath.Join(currentAbsolutePath, selectedName)
-	explorer.setSelectedDirectory(selectedPath)
+	if err := explorer.setSelectedDirectory(selectedPath); err != nil {
+		return err
+	}
 
 	headerString := currentAbsolutePath
 	// Get git infos
@@ -207,7 +212,7 @@ func (explorer *Explorer) setCurrentDirectory(path string) error {
 		status, _ := worktree.Status()
 		currentBranchName := strings.SplitAfter(head.Name().String(), "heads/")[1]
 		if status.IsClean() != true {
-			currentBranchName = currentBranchName + "[red]*[white]"
+			currentBranchName = currentBranchName + "*"
 		}
 		headerString = currentAbsolutePath + " (" + currentBranchName + ")"
 	}
@@ -239,8 +244,7 @@ func (explorer *Explorer) setCurrentLine(lineIndex int) error {
 	explorer.directoryToIndexMap[currentAbsolutePath] = lineIndex
 
 	_, selectedName := explorer.currentList.GetItemText(lineIndex)
-	explorer.setSelectedDirectory(filepath.Join(explorer.context.CurrentPath, selectedName))
-	return nil
+	return explorer.setSelectedDirectory(filepath.Join(explorer.context.CurrentPath, selectedName))
 }
 
 func (explorer *Explorer) searchInCurrentDirectory() {

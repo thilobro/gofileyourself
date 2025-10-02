@@ -19,7 +19,6 @@ import (
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/lexers"
 	"github.com/alecthomas/chroma/styles"
-	"github.com/go-git/go-git/v5"
 	"github.com/otiai10/copy"
 	"github.com/rivo/tview"
 )
@@ -105,17 +104,6 @@ func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursiv
 			}
 			return iIsDir
 		})
-		repository, err := git.PlainOpenWithOptions(
-			dirPath, &git.PlainOpenOptions{DetectDotGit: true})
-		var worktree *git.Worktree = nil
-		repoPath := ""
-		var status *git.Status = nil
-		if err == nil {
-			worktree, _ = repository.Worktree()
-			repoPath = worktree.Filesystem.Root()
-			fileStatus, _ := worktree.Status()
-			status = &fileStatus
-		}
 
 		for _, file := range fileSlice {
 			info, err := file.Info()
@@ -144,19 +132,8 @@ func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursiv
 						return err
 					}
 				}
-			} else {
-				if worktree != nil && repoPath != "" {
-					relPath, _ := filepath.Rel(repoPath, absPath)
-					fileStatus, ok := (*status)[relPath]
-					if ok {
-						if fileStatus.Worktree != ' ' {
-							displayName += "[red]*[:]"
-						}
-					}
-				}
-				if info.Mode()&0o111 != 0 {
-					displayName = "x " + displayName
-				}
+			} else if info.Mode()&0o111 != 0 {
+				displayName = "x " + displayName
 			}
 
 			if showContent && IsInterestingFile(absPath) && IsTextFile(absPath) {
