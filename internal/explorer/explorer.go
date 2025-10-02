@@ -146,7 +146,7 @@ func (explorer *Explorer) setSelectedDirectory(selectedPath string) {
 			explorer.selectedList, _ = helper.LoadFilePreview(selectedPath, nil)
 		} else {
 			newSelectedList.SetCurrentItem(selectedDirectoryIndex)
-			helper.LoadGitMarkers(selectedPath, newSelectedList)
+			explorer.loadGitMarkers(selectedPath, newSelectedList)
 			explorer.selectedList = newSelectedList
 		}
 		explorer.Draw()
@@ -154,14 +154,14 @@ func (explorer *Explorer) setSelectedDirectory(selectedPath string) {
 	go explorer.context.App.QueueUpdateDraw(f)
 }
 
-func (explorer *Explorer) asyncLoadGitMarkers(path string, list *tview.List) {
+func (explorer *Explorer) loadGitMarkers(path string, list *tview.List) {
 	f := func() {
 		helper.LoadGitMarkers(path, list)
 	}
 	go explorer.context.App.QueueUpdateDraw(f)
 }
 
-func (explorer *Explorer) asyncLoadGitHeader(header string) {
+func (explorer *Explorer) loadGitHeader(header string) {
 	f := func() {
 		// Get git infos
 		repository, err := git.PlainOpenWithOptions(header, &git.PlainOpenOptions{DetectDotGit: true})
@@ -175,7 +175,6 @@ func (explorer *Explorer) asyncLoadGitHeader(header string) {
 			}
 			header = header + " (" + currentBranchName + ")"
 			explorer.setHeader(header)
-			explorer.Draw()
 		}
 	}
 	go explorer.context.App.QueueUpdateDraw(f)
@@ -198,7 +197,7 @@ func (explorer *Explorer) setParentDirectory(path string) error {
 		parentAbsolutePath, _ := filepath.Abs(parentPath)
 		explorer.directoryToIndexMap[parentAbsolutePath] = parentDirectoryIndex
 		newParentList.SetCurrentItem(parentDirectoryIndex)
-		explorer.asyncLoadGitMarkers(parentPath, newParentList)
+		explorer.loadGitMarkers(parentPath, newParentList)
 		explorer.parentList = newParentList
 	}
 	return nil
@@ -209,7 +208,7 @@ func (explorer *Explorer) setCurrentDirectory(path string) error {
 	currentAbsolutePath, _ := filepath.Abs(path)
 	currentDirectoryIndex := explorer.directoryToIndexMap[currentAbsolutePath]
 	newCurrentList, err := helper.LoadDirectory(currentAbsolutePath, explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
-	explorer.asyncLoadGitMarkers(path, newCurrentList)
+	explorer.loadGitMarkers(path, newCurrentList)
 	if err != nil {
 		return err
 	}
@@ -229,7 +228,7 @@ func (explorer *Explorer) setCurrentDirectory(path string) error {
 	explorer.setSelectedDirectory(selectedPath)
 
 	explorer.setHeader(currentAbsolutePath)
-	explorer.asyncLoadGitHeader(currentAbsolutePath)
+	explorer.loadGitHeader(currentAbsolutePath)
 
 	explorer.searchInCurrentDirectory()
 	explorer.context.CurrentPath = currentAbsolutePath
