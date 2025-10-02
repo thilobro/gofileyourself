@@ -8,11 +8,11 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/go-git/go-git/v5"
 	"github.com/thilobro/gofileyourself/internal/helper"
 	"github.com/thilobro/gofileyourself/internal/widget"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/go-git/go-git/v5"
 	"github.com/rivo/tview"
 )
 
@@ -146,36 +146,9 @@ func (explorer *Explorer) setSelectedDirectory(selectedPath string) {
 			explorer.selectedList, _ = helper.LoadFilePreview(selectedPath, nil)
 		} else {
 			newSelectedList.SetCurrentItem(selectedDirectoryIndex)
-			explorer.loadGitMarkers(selectedPath, newSelectedList)
 			explorer.selectedList = newSelectedList
 		}
 		explorer.Draw()
-	}
-	go explorer.context.App.QueueUpdateDraw(f)
-}
-
-func (explorer *Explorer) loadGitMarkers(path string, list *tview.List) {
-	f := func() {
-		helper.LoadGitMarkers(path, list)
-	}
-	go explorer.context.App.QueueUpdateDraw(f)
-}
-
-func (explorer *Explorer) loadGitHeader(header string) {
-	f := func() {
-		// Get git infos
-		repository, err := git.PlainOpenWithOptions(header, &git.PlainOpenOptions{DetectDotGit: true})
-		if err == nil {
-			head, _ := repository.Head()
-			worktree, _ := repository.Worktree()
-			status, _ := worktree.Status()
-			currentBranchName := strings.SplitAfter(head.Name().String(), "heads/")[1]
-			if status.IsClean() != true {
-				currentBranchName = currentBranchName + "[red]*[white]"
-			}
-			header = header + " (" + currentBranchName + ")"
-			explorer.setHeader(header)
-		}
 	}
 	go explorer.context.App.QueueUpdateDraw(f)
 }
@@ -197,7 +170,6 @@ func (explorer *Explorer) setParentDirectory(path string) error {
 		parentAbsolutePath, _ := filepath.Abs(parentPath)
 		explorer.directoryToIndexMap[parentAbsolutePath] = parentDirectoryIndex
 		newParentList.SetCurrentItem(parentDirectoryIndex)
-		explorer.loadGitMarkers(parentPath, newParentList)
 		explorer.parentList = newParentList
 	}
 	return nil
@@ -208,7 +180,6 @@ func (explorer *Explorer) setCurrentDirectory(path string) error {
 	currentAbsolutePath, _ := filepath.Abs(path)
 	currentDirectoryIndex := explorer.directoryToIndexMap[currentAbsolutePath]
 	newCurrentList, err := helper.LoadDirectory(currentAbsolutePath, explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
-	explorer.loadGitMarkers(path, newCurrentList)
 	if err != nil {
 		return err
 	}
@@ -227,8 +198,22 @@ func (explorer *Explorer) setCurrentDirectory(path string) error {
 	selectedPath := filepath.Join(currentAbsolutePath, selectedName)
 	explorer.setSelectedDirectory(selectedPath)
 
-	explorer.setHeader(currentAbsolutePath)
-	explorer.loadGitHeader(currentAbsolutePath)
+	headerString := currentAbsolutePath
+	// Get git infos
+	repository, err := git.PlainOpenWithOptions(path, &git.PlainOpenOptions{DetectDotGit: true})
+	if err == nil {
+		head, _ := repository.Head()
+		worktree, _ := repository.Worktree()
+		status, _ := worktree.Status()
+		currentBranchName := strings.SplitAfter(head.Name().String(), "heads/")[1]
+		if status.IsClean() != true {
+			currentBranchName = currentBranchName + "[red]*[white]"
+		}
+		headerString = currentAbsolutePath + " (" + currentBranchName + ")"
+	}
+
+	// Update header
+	explorer.setHeader(headerString)
 
 	explorer.searchInCurrentDirectory()
 	explorer.context.CurrentPath = currentAbsolutePath
