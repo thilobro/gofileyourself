@@ -89,6 +89,7 @@ func (explorer *Explorer) initialize() error {
 		explorer.setCurrentDirectory(explorer.context.CurrentPath)
 	}
 	explorer.currentFocusedWidget = explorer.currentList
+	explorer.header.SetDynamicColors(true)
 	explorer.Draw()
 	return nil
 }
@@ -213,7 +214,22 @@ func (explorer *Explorer) setCurrentDirectory(path string) error {
 	return nil
 }
 
-func (explorer *Explorer) setHeader(text string) {
+func (explorer *Explorer) setHeader(path string) {
+	gitInfo := helper.GetGitInfo(path)
+	text := path
+	if gitInfo.Branch != "" {
+		text = text + " (" + gitInfo.Branch
+		if gitInfo.HasUncommited || gitInfo.HasUntracked {
+			text = text + "[red]*[white]"
+		}
+		if gitInfo.IsAhead {
+			text = text + "[blue]⇡[white]"
+		}
+		if gitInfo.IsBehind {
+			text = text + "[blue]↓[white]"
+		}
+		text = text + ")"
+	}
 	explorer.header.SetBorder(true).SetTitle("Explore").Blur()
 	explorer.header.SetText(text)
 }
