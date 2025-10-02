@@ -619,3 +619,55 @@ func IsInterestingFile(path string) bool {
 	extension := filepath.Ext(path)
 	return !slices.Contains(uninterestingFileTypes, extension)
 }
+
+type GitInfo struct {
+	Branch        string
+	HasUncommited bool
+	HasUntracked  bool
+	IsAhead       bool
+	IsBehind      bool
+}
+
+func GetGitInfo(path string) GitInfo {
+	cmd := exec.Command("git", "status", "--porcelain", "--branch")
+	cmd.Dir = path
+	var out strings.Builder
+	cmd.Stdout = &out
+	err := cmd.Run()
+	hasUncommited := false
+	branchName := ""
+	hasUntracked := false
+	isAhead := false
+	isBehind := false
+	if err == nil {
+		cmdOut := out.String()
+		lines := strings.SplitN(cmdOut, "\n", 2)
+		firstLineParts := strings.Split(strings.TrimPrefix(lines[0], "## "), "...")
+		branchName = firstLineParts[0]
+		if len(firstLineParts) > 1 {
+			if strings.Contains(firstLineParts[1], "ahead") {
+				isAhead = true
+			}
+			if strings.Contains(firstLineParts[1], "behind") {
+				isBehind = true
+			}
+		}
+		if len(lines) > 1 {
+			for _, line := range lines[1:] {
+				if strings.HasPrefix(strings.Trim(line, " "), "M") || strings.HasPrefix(strings.Trim(line, " "), "A") {
+					hasUncommited = true
+				} else if strings.HasPrefix(strings.Trim(line, " "), "??") {
+					hasUntracked = true
+				}
+			}
+		}
+	}
+	return GitInfo{
+		Branch:        branchName,
+		HasUncommited: hasUncommited,
+		HasUntracked:  hasUntracked,
+		IsAhead:       isAhead,
+		IsBehind:      isBehind,
+		IsDiverged:    isDiverged,
+	}
+}
