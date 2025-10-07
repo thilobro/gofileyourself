@@ -668,6 +668,5 @@ func GetGitInfo(path string) GitInfo {
 		HasUntracked:  hasUntracked,
 		IsAhead:       isAhead,
 		IsBehind:      isBehind,
-		IsDiverged:    isDiverged,
 	}
 }
