@@ -139,22 +139,13 @@ func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursiv
 			} else if info.Mode()&0o111 != 0 {
 				displayName = "x " + displayName
 			}
-			if slices.Contains(gitInfo.UntrackedFiles, absPath) {
-				displayName = displayName + "[red]?[white]"
-			}
 			for _, uncommitedFile := range gitInfo.UncommittedFiles {
-				if absPath == uncommitedFile {
-					displayName = displayName + "[red]*[white]"
-				}
 				relPath, err := filepath.Rel(absPath, uncommitedFile)
 				if err == nil && !strings.HasPrefix(relPath, "../") {
 					displayName = displayName + "[red]*[white]"
 				}
 			}
 			for _, untrackedFile := range gitInfo.UntrackedFiles {
-				if absPath == untrackedFile {
-					displayName = displayName + "[red]?[white]"
-				}
 				relPath, err := filepath.Rel(absPath, untrackedFile)
 				if err == nil && !strings.HasPrefix(relPath, "../") {
 					displayName = displayName + "[red]?[white]"
