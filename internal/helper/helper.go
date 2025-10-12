@@ -70,6 +70,7 @@ func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursiv
 		exec.Command("zoxide", "add", absPath).Run()
 	}
 	list := tview.NewList().ShowSecondaryText(false)
+	gitInfo := GetGitInfo(path)
 
 	var processDir func(dirPath string) error
 	processDir = func(dirPath string) error {
@@ -123,6 +124,9 @@ func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursiv
 			if slices.Contains(markedItems, absPath) {
 				displayName = "m> " + displayName
 			}
+			// if slices.Contains(gitInfo.UncommittedFiles, absPath) {
+			// 	displayName = displayName + "[red]*[white]"
+			// }
 			if file.IsDir() {
 				displayName += "/"
 				if recursive {
@@ -134,6 +138,27 @@ func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursiv
 				}
 			} else if info.Mode()&0o111 != 0 {
 				displayName = "x " + displayName
+			}
+			if slices.Contains(gitInfo.UntrackedFiles, absPath) {
+				displayName = displayName + "[red]?[white]"
+			}
+			for _, uncommitedFile := range gitInfo.UncommittedFiles {
+				if absPath == uncommitedFile {
+					displayName = displayName + "[red]*[white]"
+				}
+				relPath, err := filepath.Rel(absPath, uncommitedFile)
+				if err == nil && !strings.HasPrefix(relPath, "../") {
+					displayName = displayName + "[red]*[white]"
+				}
+			}
+			for _, untrackedFile := range gitInfo.UntrackedFiles {
+				if absPath == untrackedFile {
+					displayName = displayName + "[red]?[white]"
+				}
+				relPath, err := filepath.Rel(absPath, untrackedFile)
+				if err == nil && !strings.HasPrefix(relPath, "../") {
+					displayName = displayName + "[red]?[white]"
+				}
 			}
 
 			if showContent && IsInterestingFile(absPath) && IsTextFile(absPath) {
@@ -621,11 +646,13 @@ func IsInterestingFile(path string) bool {
 }
 
 type GitInfo struct {
-	Branch        string
-	HasUncommited bool
-	HasUntracked  bool
-	IsAhead       bool
-	IsBehind      bool
+	Branch           string
+	HasUncommited    bool
+	HasUntracked     bool
+	UntrackedFiles   []string
+	UncommittedFiles []string
+	IsAhead          bool
+	IsBehind         bool
 }
 
 func GetGitInfo(path string) GitInfo {
@@ -639,9 +666,11 @@ func GetGitInfo(path string) GitInfo {
 	hasUntracked := false
 	isAhead := false
 	isBehind := false
+	uncommitedFiles := []string{}
+	untrackedFiles := []string{}
 	if err == nil {
 		cmdOut := out.String()
-		lines := strings.SplitN(cmdOut, "\n", 2)
+		lines := strings.Split(cmdOut, "\n")
 		firstLineParts := strings.Split(strings.TrimPrefix(lines[0], "## "), "...")
 		branchName = firstLineParts[0]
 		if len(firstLineParts) > 1 {
@@ -654,19 +683,27 @@ func GetGitInfo(path string) GitInfo {
 		}
 		if len(lines) > 1 {
 			for _, line := range lines[1:] {
-				if strings.HasPrefix(strings.Trim(line, " "), "M") || strings.HasPrefix(strings.Trim(line, " "), "A") {
-					hasUncommited = true
-				} else if strings.HasPrefix(strings.Trim(line, " "), "??") {
-					hasUntracked = true
+				if line != "" {
+					prefix := line[:2]
+					linePath, _ := filepath.Abs(line[3:])
+					if prefix == " M" || prefix == "M " || prefix == "MM" {
+						hasUncommited = true
+						uncommitedFiles = append(uncommitedFiles, linePath)
+					} else if prefix == "??" {
+						hasUntracked = true
+						untrackedFiles = append(untrackedFiles, linePath)
+					}
 				}
 			}
 		}
 	}
 	return GitInfo{
-		Branch:        branchName,
-		HasUncommited: hasUncommited,
-		HasUntracked:  hasUntracked,
-		IsAhead:       isAhead,
-		IsBehind:      isBehind,
+		Branch:           branchName,
+		HasUncommited:    hasUncommited,
+		HasUntracked:     hasUntracked,
+		UntrackedFiles:   untrackedFiles,
+		UncommittedFiles: uncommitedFiles,
+		IsAhead:          isAhead,
+		IsBehind:         isBehind,
 	}
 }
