@@ -124,9 +124,6 @@ func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursiv
 			if slices.Contains(markedItems, absPath) {
 				displayName = "m> " + displayName
 			}
-			// if slices.Contains(gitInfo.UncommittedFiles, absPath) {
-			// 	displayName = displayName + "[red]*[white]"
-			// }
 			if file.IsDir() {
 				displayName += "/"
 				if recursive {
@@ -647,11 +644,11 @@ type GitInfo struct {
 }
 
 func GetGitInfo(path string) GitInfo {
-	cmd := exec.Command("git", "status", "--porcelain", "--branch")
-	cmd.Dir = path
-	var out strings.Builder
-	cmd.Stdout = &out
-	err := cmd.Run()
+	gitStatusCmd := exec.Command("git", "status", "--porcelain", "--branch")
+	gitStatusCmd.Dir = path
+	var gitStatusOut strings.Builder
+	gitStatusCmd.Stdout = &gitStatusOut
+	err := gitStatusCmd.Run()
 	hasUncommited := false
 	branchName := ""
 	hasUntracked := false
@@ -660,8 +657,8 @@ func GetGitInfo(path string) GitInfo {
 	uncommitedFiles := []string{}
 	untrackedFiles := []string{}
 	if err == nil {
-		cmdOut := out.String()
-		lines := strings.Split(cmdOut, "\n")
+		gitStatusOut := gitStatusOut.String()
+		lines := strings.Split(gitStatusOut, "\n")
 		firstLineParts := strings.Split(strings.TrimPrefix(lines[0], "## "), "...")
 		branchName = firstLineParts[0]
 		if len(firstLineParts) > 1 {
@@ -673,16 +670,24 @@ func GetGitInfo(path string) GitInfo {
 			}
 		}
 		if len(lines) > 1 {
-			for _, line := range lines[1:] {
-				if line != "" {
-					prefix := line[:2]
-					linePath, _ := filepath.Abs(line[3:])
-					if prefix == " M" || prefix == "M " || prefix == "MM" {
-						hasUncommited = true
-						uncommitedFiles = append(uncommitedFiles, linePath)
-					} else if prefix == "??" {
-						hasUntracked = true
-						untrackedFiles = append(untrackedFiles, linePath)
+			gitRootCmd := exec.Command("git", "rev-parse", "--show-toplevel")
+			gitRootCmd.Dir = path
+			var gitRootOut strings.Builder
+			gitRootCmd.Stdout = &gitRootOut
+			err = gitRootCmd.Run()
+			if err == nil {
+				gitRootPath := strings.TrimSuffix(gitRootOut.String(), "\n")
+				for _, line := range lines[1:] {
+					if line != "" {
+						prefix := line[:2]
+						linePath := filepath.Join(gitRootPath, line[3:])
+						if prefix == " M" || prefix == "M " || prefix == "MM" {
+							hasUncommited = true
+							uncommitedFiles = append(uncommitedFiles, linePath)
+						} else if prefix == "??" {
+							hasUntracked = true
+							untrackedFiles = append(untrackedFiles, linePath)
+						}
 					}
 				}
 			}
