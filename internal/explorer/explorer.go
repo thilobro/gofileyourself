@@ -66,7 +66,7 @@ func NewExplorer(context *widget.Context) (*Explorer, error) {
 		yankedFile:              "",
 		markedFiles:             []string{},
 		yankedMarkedFiles:       []string{},
-		cycleRecentlyVisitedIdx: 0,
+		cycleRecentlyVisitedIdx: -1,
 		cycleRecentSearchesIdx:  -1,
 		cycleRecentCommandsIdx:  -1,
 	}
@@ -519,22 +519,20 @@ func (explorer *Explorer) jumpToAnchor(key string) {
 
 func (explorer *Explorer) cycleRecentlyVisited(isBackward bool) {
 	if isBackward {
-		explorer.cycleRecentlyVisitedIdx--
+		if explorer.cycleRecentlyVisitedIdx <= -1 {
+			explorer.cycleRecentlyVisitedIdx = -1
+			return
+		} else if explorer.cycleRecentlyVisitedIdx > 0 {
+			explorer.cycleRecentlyVisitedIdx--
+		}
 	} else {
 		explorer.cycleRecentlyVisitedIdx++
 	}
-	if explorer.cycleRecentlyVisitedIdx < 0 {
-		explorer.cycleRecentlyVisitedIdx = 0
+	recentFile, lenFiles := helper.GetRecentFile(explorer.cycleRecentlyVisitedIdx, explorer.context.Config.HistoryLen)
+	if explorer.cycleRecentlyVisitedIdx >= lenFiles {
+		explorer.cycleRecentlyVisitedIdx = lenFiles - 1
 	}
-	recentFile, err := helper.GetRecentFile(explorer.cycleRecentlyVisitedIdx, explorer.context.Config.HistoryLen)
-	if err != nil {
-		if isBackward {
-			explorer.cycleRecentlyVisitedIdx = 0
-		} else {
-			explorer.cycleRecentlyVisitedIdx--
-		}
-		return
-	}
+
 	explorer.setCurrentDirectory(filepath.Dir(recentFile))
 	explorer.setCurrentLine(helper.FindExactItem(explorer.currentList, filepath.Base(recentFile)))
 }
