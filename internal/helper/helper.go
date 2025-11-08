@@ -3,6 +3,7 @@ package helper
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -347,62 +348,51 @@ func writeStringsToFile(filename string, strings []string) error {
 	return nil
 }
 
-func UpdateRecentLinesFile(filePath string, path *string, maxLines int) []string {
-	// Read existing content
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		os.Create(filePath)
-	}
+func UpdateRecentLinesFile(filePath string, path *string, maxLines int) map[string]int {
+	data := make(map[string]int)
+	filteredData := make(map[string]int)
+	idx := 0
 
-	// Create map for unique values
-	linesSet := map[string]int{}
-
-	// Split content and add to set
-	lines := strings.Split(string(content), "\n")
-	offset := 0
-	if path != nil && *path != "" {
-		offset = 1
+	file, _ := os.ReadFile(filePath)
+	json.Unmarshal(file, &data)
+	val, ok := data[*path]
+	if ok {
+		data[*path] = val + 5 + 1
+	} else {
+		data[*path] = 5 + 1
 	}
-	for idx, line := range lines {
-		if line != "" { // Skip empty lines
-			linesSet[line] = idx + offset
+	for fileName, rank := range data {
+		rank = rank - 1
+		idx = idx + 1
+		if rank > 0 && idx <= maxLines {
+			filteredData[fileName] = rank
 		}
 	}
-
-	// Add new path if provided
-	if path != nil && *path != "" {
-		linesSet[*path] = 0
+	jsonString, _ := json.Marshal(filteredData)
+	if err := writeStringsToFile(filePath, []string{string(jsonString)}); err != nil {
+		return filteredData
 	}
-
-	// Convert back to slice and limit length
-	var result []string
-	for line := range linesSet {
-		if len(result) >= maxLines {
-			break
-		}
-		result = append(result, line)
-	}
-	// Sort by original order
-	sort.SliceStable(result, func(i, j int) bool {
-		return linesSet[result[i]] > linesSet[result[j]]
-	})
-
-	// Write back to file
-	if err := writeStringsToFile(filePath, result); err != nil {
-		return result // Return current state despite write error
-	}
-
-	return result
+	return filteredData
 }
 
-func GetRecentFile(fileIndex int, maxHistoryLen int) (string, error) {
+func GetRecentFile(fileIndex int, maxHistoryLen int) (string, int) {
 	historyPath := filepath.Join(os.Getenv("HOME"), ".gofileyourselfhistory")
-	lines := UpdateRecentLinesFile(historyPath, nil, maxHistoryLen)
-	lenLines := len(lines)
-	if fileIndex >= lenLines {
-		return "", errors.New("file index out of range")
+	data := make(map[string]int)
+	file, _ := os.ReadFile(historyPath)
+	json.Unmarshal(file, &data)
+	recentFiles := make([]string, 0, len(data))
+	for k := range data {
+		recentFiles = append(recentFiles, k)
 	}
-	return lines[lenLines-fileIndex-1], nil
+	sort.SliceStable(recentFiles, func(i, j int) bool {
+		return data[recentFiles[i]] < data[recentFiles[j]]
+	})
+
+	lenFiles := len(recentFiles)
+	if fileIndex >= lenFiles {
+		return recentFiles[0], lenFiles
+	}
+	return recentFiles[lenFiles-fileIndex-1], lenFiles
 }
 
 func IsFileNotFound(path string) bool {

@@ -1,7 +1,7 @@
 package finder
 
 import (
-	"bufio"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"slices"
@@ -272,15 +272,18 @@ func (finder *Finder) showRecentHistory() {
 	finder.title = "Find Recent"
 	finder.fileList.Clear()
 	historyPath := filepath.Join(os.Getenv("HOME"), ".gofileyourselfhistory")
-	historyFile, err := os.Open(historyPath)
-	if err != nil {
-		return
+	data := make(map[string]int)
+	file, _ := os.ReadFile(historyPath)
+	json.Unmarshal(file, &data)
+	recentFiles := make([]string, 0, len(data))
+	for k := range data {
+		recentFiles = append(recentFiles, k)
 	}
-	defer historyFile.Close()
-	scanner := bufio.NewScanner(historyFile)
-	for scanner.Scan() {
-		line := scanner.Text()
-		finder.fileList.InsertItem(0, line, line, 0, nil)
+	sort.SliceStable(recentFiles, func(i, j int) bool {
+		return data[recentFiles[i]] < data[recentFiles[j]]
+	})
+	for _, fileName := range recentFiles {
+		finder.fileList.InsertItem(0, fileName, fileName, 0, nil)
 	}
 	helper.CopyListContent(finder.fileList, finder.searchedList)
 	helper.CopyListContent(finder.searchedList, finder.previousSearchedList)
