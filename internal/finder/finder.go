@@ -44,6 +44,13 @@ func (finder *Finder) setDrawFunc() {
 	})
 }
 
+func (finder *Finder) showFind() {
+	finder.title = "Find"
+	finder.fileList.Clear()
+	finder.resetFileList(false)
+	finder.searchInDirectory()
+}
+
 func NewFinder(context *widget.Context) (*Finder, error) {
 	finder := &Finder{
 		context:              context,
@@ -58,18 +65,12 @@ func NewFinder(context *widget.Context) (*Finder, error) {
 		listUpdateChan:       make(chan *tview.List, 10), // Buffered channel
 		title:                "Find",
 	}
-	finder.resetFileList(false)
 	finder.SetupKeyBindings()
 	finder.currentFocusedWidget = finder.searchedList
 	finder.setDrawFunc()
 
 	// Start list update handler
 	go finder.handleListUpdates()
-
-	err := finder.searchInDirectory()
-	if err != nil {
-		return nil, err
-	}
 
 	return finder, nil
 }

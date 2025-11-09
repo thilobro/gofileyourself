@@ -16,6 +16,9 @@ func (finder *Finder) handleKeys(event *tcell.EventKey) *tcell.EventKey {
 	case tcell.KeyCtrlG:
 		finder.showGrep()
 		return nil
+	case tcell.KeyCtrlF:
+		finder.showFind()
+		return nil
 	case tcell.KeyCtrlH:
 		finder.context.ShowHiddenFiles = !finder.context.ShowHiddenFiles
 
