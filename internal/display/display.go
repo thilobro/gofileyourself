@@ -27,22 +27,13 @@ func (display *Display) setupKeyBindings() {
 			display.context.App.Stop()
 		case tcell.KeyCtrlF:
 			display.setMode(widget.Find)
-			if display.activeWidget != nil {
-				inputHandler := display.activeWidget.GetInputCapture()
-				return inputHandler(event)
-			}
+			return nil
 		case tcell.KeyCtrlR:
-			display.setMode(widget.Find)
-			if display.activeWidget != nil {
-				inputHandler := display.activeWidget.GetInputCapture()
-				return inputHandler(event)
-			}
+			display.setMode(widget.FindRecent)
+			return nil
 		case tcell.KeyCtrlG:
-			display.setMode(widget.Find)
-			if display.activeWidget != nil {
-				inputHandler := display.activeWidget.GetInputCapture()
-				return inputHandler(event)
-			}
+			display.setMode(widget.Grep)
+			return nil
 		case tcell.KeyEscape:
 			display.setMode(widget.Explorer)
 			return nil // Consume the event
@@ -79,7 +70,9 @@ func (display *Display) setActiveWidgetBasedOnMode(mode widget.Mode) {
 	display.context.App.SetRoot(display.activeWidget.Root(), true)
 }
 
-func NewDisplay(factories map[widget.Mode]widget.Factory, chooseFilePath *string, selectedFilePath *string, configPath *string) (*Display, error) {
+func NewDisplay(factories map[widget.Mode]widget.Factory, chooseFilePath *string,
+	selectedFilePath *string, configPath *string, startWidget *string,
+) (*Display, error) {
 	app := tview.NewApplication()
 	config, _ := config.NewConfig(configPath)
 	currentPath, err := os.Getwd()
@@ -89,7 +82,6 @@ func NewDisplay(factories map[widget.Mode]widget.Factory, chooseFilePath *string
 	display := &Display{}
 	theme := theme.NewTheme(&config.ThemePath)
 
-	explorerFactory := factories[widget.Explorer]
 	context := &widget.Context{
 		App:              app,
 		CurrentPath:      currentPath,
@@ -102,14 +94,27 @@ func NewDisplay(factories map[widget.Mode]widget.Factory, chooseFilePath *string
 		RecentCommands:   make([]string, 10),
 		RecentSearches:   make([]string, 10),
 	}
-	explorerWidget, err := explorerFactory.New(context)
+	var mode widget.Mode
+	var factory widget.Factory
+	switch *startWidget {
+	case "explore":
+		mode = widget.Explorer
+	case "find":
+		mode = widget.Find
+	case "findrecent":
+		mode = widget.FindRecent
+	case "grep":
+		mode = widget.Grep
+	}
+	factory = factories[mode]
+	sWidget, err := factory.New(context)
 	if err != nil {
 		return nil, err
 	}
 	display.context = context
-	display.activeWidget = explorerWidget
+	display.activeWidget = sWidget
 	display.widgetFactory = factories
-	display.mode = widget.Explorer
+	display.mode = mode
 
 	return display, nil
 }

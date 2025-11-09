@@ -51,7 +51,7 @@ func (finder *Finder) showFind() {
 	finder.searchInDirectory()
 }
 
-func NewFinder(context *widget.Context) (*Finder, error) {
+func NewFinder(context *widget.Context, finderType *string) (*Finder, error) {
 	finder := &Finder{
 		context:              context,
 		rootFlex:             tview.NewFlex(),
@@ -63,7 +63,7 @@ func NewFinder(context *widget.Context) (*Finder, error) {
 		searchTerm:           "",
 		fuzzySearchQuit:      make(chan bool),
 		listUpdateChan:       make(chan *tview.List, 10), // Buffered channel
-		title:                "Find",
+		title:                "",
 	}
 	finder.SetupKeyBindings()
 	finder.currentFocusedWidget = finder.searchedList
@@ -71,6 +71,16 @@ func NewFinder(context *widget.Context) (*Finder, error) {
 
 	// Start list update handler
 	go finder.handleListUpdates()
+
+	switch *finderType {
+	case "find":
+		finder.showFind()
+	case "findrecent":
+		finder.showRecentHistory()
+	case "grep":
+		finder.showGrep()
+	}
+	finder.Draw()
 
 	return finder, nil
 }
