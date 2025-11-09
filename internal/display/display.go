@@ -27,7 +27,10 @@ func (display *Display) setupKeyBindings() {
 			display.context.App.Stop()
 		case tcell.KeyCtrlF:
 			display.setMode(widget.Find)
-			return nil // Consume the event
+			if display.activeWidget != nil {
+				inputHandler := display.activeWidget.GetInputCapture()
+				return inputHandler(event)
+			}
 		case tcell.KeyCtrlR:
 			display.setMode(widget.Find)
 			if display.activeWidget != nil {
