@@ -16,6 +16,9 @@ func main() {
 	defaultConfig := os.Getenv("HOME") + "/.gofileyourself.yaml"
 	config := flag.String("config", defaultConfig, "Path to config file")
 	debug := flag.Bool("debug", false, "Enable debug logging")
+	startWidget := flag.String("startwidget", "explore", "Start widget")
+
+	// flags for nvim plugin
 	cfp := flag.String("choosefiles", "", "Use as a file chooser")
 	sf := flag.String("selectfile", "", "The file that was selected")
 
@@ -51,10 +54,11 @@ func main() {
 	factories := map[widget.Mode]widget.Factory{
 		widget.Explorer:   &explorer.Factory{},
 		widget.Find:       &finder.Factory{},
-		widget.FindRecent: &finder.Factory{},
+		widget.FindRecent: &finder.FindRecentFactory{},
+		widget.Grep:       &finder.GrepFactory{},
 	}
 
-	display, err := display.NewDisplay(factories, chooseFilePath, selectedFilePath, config)
+	display, err := display.NewDisplay(factories, chooseFilePath, selectedFilePath, config, startWidget)
 	if err != nil {
 		panic(err)
 	}

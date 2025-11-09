@@ -34,6 +34,7 @@ Flags:
 - `--choosefiles=<file>` - Use as a file chooser that writes selected files to the given file
 - `--selectfile=<file>` - Select the given file path when opening the file manager
 - `--config=<path>` - Default is `~/.gofindyourself.yaml`
+- `--startwidget=<widget>` - Start widget, default is `"explore"`, other possibilities are `"find"`, `"findrecent"`, `"grep"`
 
 Keys:
 

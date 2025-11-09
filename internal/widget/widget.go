@@ -13,6 +13,7 @@ const (
 	Explorer Mode = iota
 	Find
 	FindRecent
+	Grep
 )
 
 type Context struct {

@@ -10,15 +10,6 @@ import (
 
 func (finder *Finder) handleKeys(event *tcell.EventKey) *tcell.EventKey {
 	switch event.Key() {
-	case tcell.KeyCtrlR:
-		finder.showRecentHistory()
-		return nil
-	case tcell.KeyCtrlG:
-		finder.showGrep()
-		return nil
-	case tcell.KeyCtrlF:
-		finder.showFind()
-		return nil
 	case tcell.KeyCtrlH:
 		finder.context.ShowHiddenFiles = !finder.context.ShowHiddenFiles
 
