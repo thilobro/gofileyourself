@@ -56,119 +56,6 @@ func CopyFile(src string, dst string) error {
 	return err
 }
 
-// LoadDirectory is a helper function that loads directory contents into a list
-func LoadDirectory(path string, showHiddenFiles bool, showContent bool, recursive bool, markedItems []string) (*tview.List, error) {
-	absPath, _ := filepath.Abs(path)
-	fileInfo, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-
-	if !fileInfo.IsDir() {
-		return nil, nil
-	}
-	if !recursive {
-		exec.Command("zoxide", "add", absPath).Run()
-	}
-	list := tview.NewList().ShowSecondaryText(false)
-	gitInfo := GetGitInfo(path)
-
-	var processDir func(dirPath string) error
-	processDir = func(dirPath string) error {
-		files, err := os.ReadDir(dirPath)
-		if err != nil {
-			return err
-		}
-
-		fileSlice := make([]os.DirEntry, 0)
-		for _, file := range files {
-			fileName := file.Name()
-			if !showHiddenFiles && len(fileName) > 0 && fileName[0] == '.' {
-				continue
-			}
-			if IsInterestingFile(fileName) {
-				fileSlice = append(fileSlice, file)
-			}
-		}
-		if len(fileSlice) == 0 {
-			if !recursive {
-				list.AddItem("Directory is empty...", "", 0, nil)
-			}
-			return nil
-		}
-
-		// Sort: directories first, then alphabetically
-		sort.Slice(fileSlice, func(i, j int) bool {
-			iIsDir := fileSlice[i].IsDir()
-			jIsDir := fileSlice[j].IsDir()
-			if iIsDir == jIsDir {
-				return fileSlice[i].Name() < fileSlice[j].Name()
-			}
-			return iIsDir
-		})
-
-		for _, file := range fileSlice {
-			info, err := file.Info()
-			if err != nil {
-				continue
-			}
-
-			// Get relative path from the root directory
-			absPath := filepath.Join(dirPath, file.Name())
-			relPath, err := filepath.Rel(path, absPath)
-			if err != nil {
-				continue
-			}
-
-			displayName := relPath
-
-			if slices.Contains(markedItems, absPath) {
-				displayName = "m> " + displayName
-			}
-			if file.IsDir() {
-				displayName += "/"
-				if recursive {
-					// Recursively process subdirectories
-					err := processDir(filepath.Join(dirPath, file.Name()))
-					if err != nil {
-						return err
-					}
-				}
-			} else if info.Mode()&0o111 != 0 {
-				displayName = "x " + displayName
-			}
-			for _, uncommitedFile := range gitInfo.UncommittedFiles {
-				relPath, err := filepath.Rel(absPath, uncommitedFile)
-				if err == nil && !strings.HasPrefix(relPath, "../") {
-					displayName = displayName + "[red]*[white]"
-				}
-			}
-			for _, untrackedFile := range gitInfo.UntrackedFiles {
-				relPath, err := filepath.Rel(absPath, untrackedFile)
-				if err == nil && !strings.HasPrefix(relPath, "../") {
-					displayName = displayName + "[red]?[white]"
-				}
-			}
-
-			if showContent && IsInterestingFile(absPath) && IsTextFile(absPath) {
-				content, _ := os.ReadFile(absPath)
-				displayName += " >>> " + string(content)
-
-			}
-
-			list.AddItem(displayName, relPath, 0, nil)
-		}
-		return nil
-	}
-
-	err = processDir(path)
-	if err != nil {
-		return nil, err
-	}
-
-	return list, nil
-}
-
 func IsTextFile(path string) bool {
 	file, err := os.Open(path)
 	if err != nil {
@@ -627,8 +514,8 @@ type GitInfo struct {
 	Branch           string
 	HasUncommited    bool
 	HasUntracked     bool
-	UntrackedFiles   []string
-	UncommittedFiles []string
+	UntrackedFiles   map[string]bool
+	UncommittedFiles map[string]bool
 	IsAhead          bool
 	IsBehind         bool
 }
@@ -644,8 +531,8 @@ func GetGitInfo(path string) GitInfo {
 	hasUntracked := false
 	isAhead := false
 	isBehind := false
-	uncommitedFiles := []string{}
-	untrackedFiles := []string{}
+	uncommitedFiles := map[string]bool{}
+	untrackedFiles := map[string]bool{}
 	if err == nil {
 		gitStatusOut := gitStatusOut.String()
 		lines := strings.Split(gitStatusOut, "\n")
@@ -673,10 +560,10 @@ func GetGitInfo(path string) GitInfo {
 						linePath := filepath.Join(gitRootPath, line[3:])
 						if prefix == " M" || prefix == "M " || prefix == "MM" {
 							hasUncommited = true
-							uncommitedFiles = append(uncommitedFiles, linePath)
+							uncommitedFiles[linePath] = true
 						} else if prefix == "??" {
 							hasUntracked = true
-							untrackedFiles = append(untrackedFiles, linePath)
+							untrackedFiles[linePath] = true
 						}
 					}
 				}

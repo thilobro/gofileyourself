@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/thilobro/gofileyourself/internal/helper"
+	"github.com/thilobro/gofileyourself/internal/loader"
 	"github.com/thilobro/gofileyourself/internal/widget"
 
 	gostring "github.com/boyter/go-string"
@@ -126,7 +127,8 @@ func (finder *Finder) setSelectedDirectory(selectedPath string) error {
 	}
 	selectedDirectoryIndex := 0
 
-	newSelectedList, err := helper.LoadDirectory(selectedPath, finder.context.ShowHiddenFiles, false, false, []string{})
+	directoryLoader := loader.NewDirectoryLoader(finder.context.ShowHiddenFiles, false, false, []string{})
+	newSelectedList, err := directoryLoader.LoadDirectory(selectedPath)
 	if err != nil {
 		return err
 	}
@@ -234,7 +236,8 @@ func (finder *Finder) RemoveContentFromDisplayName() {
 
 func (finder *Finder) resetFileList(showContent bool) error {
 	finder.fileList.Clear()
-	fileList, err := helper.LoadDirectory(finder.context.CurrentPath, finder.context.ShowHiddenFiles, showContent, true, []string{})
+	directoryLoader := loader.NewDirectoryLoader(finder.context.ShowHiddenFiles, showContent, true, []string{})
+	fileList, err := directoryLoader.LoadDirectory(finder.context.CurrentPath)
 	if err != nil {
 		return err
 	}

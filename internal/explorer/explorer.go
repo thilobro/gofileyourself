@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/thilobro/gofileyourself/internal/helper"
+	"github.com/thilobro/gofileyourself/internal/loader"
 	"github.com/thilobro/gofileyourself/internal/widget"
 
 	"github.com/gdamore/tcell/v2"
@@ -139,7 +140,8 @@ func (explorer *Explorer) setSelectedDirectory(selectedPath string) error {
 	}
 	selectedDirectoryIndex := explorer.directoryToIndexMap[selectedAbsolutePath]
 
-	newSelectedList, err := helper.LoadDirectory(selectedPath, explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
+	directoryLoader := loader.NewDirectoryLoader(explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
+	newSelectedList, err := directoryLoader.LoadDirectory(selectedPath)
 	if err != nil {
 		return err
 	}
@@ -163,7 +165,8 @@ func (explorer *Explorer) setParentDirectory(path string) error {
 		explorer.parentList = emptyList
 	} else {
 		parentPath := filepath.Join(currentAbsolutePath, "..")
-		newParentList, err := helper.LoadDirectory(parentPath, explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
+		directoryLoader := loader.NewDirectoryLoader(explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
+		newParentList, err := directoryLoader.LoadDirectory(parentPath)
 		if err != nil {
 			return err
 		}
@@ -182,7 +185,8 @@ func (explorer *Explorer) setCurrentDirectory(path string) error {
 	// Update current directory
 	currentAbsolutePath, _ := filepath.Abs(path)
 	currentDirectoryIndex := explorer.directoryToIndexMap[currentAbsolutePath]
-	newCurrentList, err := helper.LoadDirectory(currentAbsolutePath, explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
+	directoryLoader := loader.NewDirectoryLoader(explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
+	newCurrentList, err := directoryLoader.LoadDirectory(currentAbsolutePath)
 	if err != nil {
 		return err
 	}
