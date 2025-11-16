@@ -9,6 +9,7 @@ import (
 	"slices"
 	"sort"
 
+	"github.com/karrick/godirwalk"
 	"github.com/rivo/tview"
 	"github.com/thilobro/gofileyourself/internal/helper"
 )
@@ -29,6 +30,49 @@ func NewDirectoryLoader(showHiddenFiles bool, showContent bool, recursive bool, 
 		recursive:       recursive,
 		markedItems:     markedItems,
 	}
+}
+
+// processEntryCallback handles individual directory entries during traversal
+func (dl *DirectoryLoader) processEntryCallback(fullPath string, de *godirwalk.Dirent, baseDir string, list *tview.List) error {
+	relPath, _ := filepath.Rel(baseDir, fullPath)
+
+	if !dl.shouldIncludeEntry(relPath) {
+		return nil
+	}
+
+	displayName := relPath
+
+	// Process directories
+	if de.IsDir() {
+		displayName += "/"
+	} else {
+		// Add file content preview if configured
+		if dl.showContent && helper.IsInterestingFile(fullPath) && helper.IsTextFile(fullPath) {
+			content, err := os.ReadFile(fullPath)
+			if err != nil {
+				log.Printf("Failed to read file content: %v", err)
+				return nil
+			}
+			displayName += " >>> " + string(content)
+		}
+	}
+	list.AddItem(displayName, relPath, 0, nil)
+	return nil
+}
+
+// shouldIncludeEntry determines if a directory entry should be included
+func (dl *DirectoryLoader) shouldIncludeEntry(relPath string) bool {
+	// Skip hidden files if not requested
+	if !dl.showHiddenFiles && len(relPath) > 0 && relPath[0] == '.' {
+		return false
+	}
+
+	// Only include interesting files
+	if !helper.IsInterestingFile(filepath.Base(relPath)) {
+		return false
+	}
+
+	return true
 }
 
 // LoadDirectory loads directory contents into a tview.List
@@ -58,11 +102,21 @@ func (dl *DirectoryLoader) LoadDirectory(path string) (*tview.List, error) {
 		if err := exec.Command("zoxide", "add", absPath).Run(); err != nil {
 			log.Printf("Failed to add directory to zoxide: %v", err)
 		}
-	}
 
-	// Process directory contents
-	if err := dl.processDirectory(absPath, path, list, &gitInfo); err != nil {
-		return nil, fmt.Errorf("directory processing failed: %w", err)
+		// Process directory contents
+		if err := dl.processDirectory(absPath, path, list, &gitInfo); err != nil {
+			return nil, fmt.Errorf("directory processing failed: %w", err)
+		}
+	} else {
+		godirwalk.Walk(absPath, &godirwalk.Options{
+			Callback: func(osPathname string, de *godirwalk.Dirent) error {
+				if !dl.recursive && de.IsDir() && de.Name() != filepath.Base(absPath) {
+					return godirwalk.SkipThis
+				}
+				return dl.processEntryCallback(osPathname, de, absPath, list)
+			},
+			Unsorted: true,
+		})
 	}
 
 	return list, nil
@@ -112,13 +166,7 @@ func (dl *DirectoryLoader) getFilteredEntries(dirPath string) ([]os.DirEntry, er
 	for _, file := range files {
 		fileName := file.Name()
 
-		// Skip hidden files if not requested
-		if !dl.showHiddenFiles && len(fileName) > 0 && fileName[0] == '.' {
-			continue
-		}
-
-		// Only include interesting files
-		if helper.IsInterestingFile(fileName) {
+		if dl.shouldIncludeEntry(fileName) {
 			filtered = append(filtered, file)
 		}
 	}
