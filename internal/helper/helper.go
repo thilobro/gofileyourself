@@ -113,78 +113,77 @@ func LoadFilePreview(path string, searchTerm *string, maxNumLines int) (*tview.T
 		SetDynamicColors(true).
 		SetRegions(true).
 		SetWordWrap(true)
-
-	if IsTextFile(path) {
-		content, err := readLines(path, maxNumLines)
-		if err != nil {
-			return nil, err
-		}
-
-		lexer := lexers.Match(path)
-		if lexer == nil {
-			lexer = lexers.Fallback
-		}
-
-		style := styles.Get("gofileyourself")
-		if style == nil {
-			style = styles.Fallback
-		}
-
-		formatter := formatters.Get("tview")
-		if formatter == nil {
-			formatter = formatters.Fallback
-		}
-
-		iterator, err := lexer.Tokenise(nil, string(content))
-		if err != nil {
-			return nil, err
-		}
-
-		var buf bytes.Buffer
-		err = formatter.Format(&buf, style, iterator)
-		if err != nil {
-			return nil, err
-		}
-		formattedContent := buf.String()
-		if searchTerm != nil && *searchTerm == "" {
-			formattedContent = strings.ReplaceAll(formattedContent, "[\"hlrg\"]", "")
-			formattedContent = strings.ReplaceAll(formattedContent, "[\"\"]", "")
-			searchTerm = nil
-		}
-		if searchTerm != nil {
-			terms := strings.Split(*searchTerm, " ")
-			for _, term := range terms {
-				pattern := regexp.MustCompile(`(?i)(\[#.*?\])|(` + regexp.QuoteMeta(term) + `)`)
-				formattedContent = pattern.ReplaceAllStringFunc(formattedContent, func(match string) string {
-					// The `match` variable is the substring that the regex found.
-					// It will either be "[#...]" or your search term "en".
-
-					// We check if the match is the part we want to IGNORE.
-					// A simple check is to see if it starts with "[#".
-					if strings.HasPrefix(match, "[#") {
-						// If it's the excluded block, return it completely unchanged.
-						return match
-					} else {
-						// Otherwise, it's the term we want to highlight.
-						// Surround it with your desired markers.
-						return `["hlrg"]` + match + `[""]`
-					}
-				})
-			}
-		}
-		textView.SetText(formattedContent)
-		if searchTerm != nil {
-			firstLine, _ := findLineNumberScanner(formattedContent, "hlrg")
-			textView.SetRegions(true)
-			textView.Highlight("hlrg")
-			_, _, _, height := textView.GetInnerRect()
-			if firstLine >= height/2 {
-				textView.ScrollToHighlight()
-			}
-		}
+	if !IsTextFile(path) {
+		textView.SetText("[gray::]No preview...[-::]")
 		return textView, nil
 	}
-	textView.SetText("[gray::]No preview...[-::]")
+	content, err := readLines(path, maxNumLines)
+	if err != nil {
+		return nil, err
+	}
+
+	lexer := lexers.Match(path)
+	if lexer == nil {
+		lexer = lexers.Fallback
+	}
+
+	style := styles.Get("gofileyourself")
+	if style == nil {
+		style = styles.Fallback
+	}
+
+	formatter := formatters.Get("tview")
+	if formatter == nil {
+		formatter = formatters.Fallback
+	}
+
+	iterator, err := lexer.Tokenise(nil, string(content))
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	err = formatter.Format(&buf, style, iterator)
+	if err != nil {
+		return nil, err
+	}
+	formattedContent := buf.String()
+	if searchTerm != nil && *searchTerm == "" {
+		formattedContent = strings.ReplaceAll(formattedContent, "[\"hlrg\"]", "")
+		formattedContent = strings.ReplaceAll(formattedContent, "[\"\"]", "")
+		searchTerm = nil
+	}
+	if searchTerm != nil {
+		terms := strings.Split(*searchTerm, " ")
+		for _, term := range terms {
+			pattern := regexp.MustCompile(`(?i)(\[#.*?\])|(` + regexp.QuoteMeta(term) + `)`)
+			formattedContent = pattern.ReplaceAllStringFunc(formattedContent, func(match string) string {
+				// The `match` variable is the substring that the regex found.
+				// It will either be "[#...]" or your search term "en".
+
+				// We check if the match is the part we want to IGNORE.
+				// A simple check is to see if it starts with "[#".
+				if strings.HasPrefix(match, "[#") {
+					// If it's the excluded block, return it completely unchanged.
+					return match
+				} else {
+					// Otherwise, it's the term we want to highlight.
+					// Surround it with your desired markers.
+					return `["hlrg"]` + match + `[""]`
+				}
+			})
+		}
+	}
+	textView.SetText(formattedContent)
+	if searchTerm != nil {
+		firstLine, _ := findLineNumberScanner(formattedContent, "hlrg")
+		textView.SetRegions(true)
+		textView.Highlight("hlrg")
+		_, _, _, height := textView.GetInnerRect()
+		if firstLine >= height/2 {
+			textView.ScrollToHighlight()
+		}
+	}
 	return textView, nil
 }
 
