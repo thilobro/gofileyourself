@@ -79,8 +79,35 @@ func IsTextFile(path string) bool {
 	return utf8.Valid(buffer[:n])
 }
 
+func readLines(filename string, maxNumLines int) (string, error) {
+	var buffer bytes.Buffer
+	num_lines := 0
+	file, err := os.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+	buf := bytes.NewBuffer(file)
+	for {
+		line, err := buf.ReadString('\n')
+		if len(line) == 0 {
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				return buffer.String(), err
+			}
+		}
+		buffer.WriteString(line)
+		num_lines += 1
+		if num_lines > maxNumLines || (err != nil && err != io.EOF) {
+			return buffer.String(), err
+		}
+	}
+	return buffer.String(), nil
+}
+
 // LoadFilePreview is a helper function that creates a text view for file contents
-func LoadFilePreview(path string, searchTerm *string) (*tview.TextView, error) {
+func LoadFilePreview(path string, searchTerm *string, maxNumLines int) (*tview.TextView, error) {
 	// Create text view
 	textView := tview.NewTextView().
 		SetDynamicColors(true).
@@ -88,7 +115,7 @@ func LoadFilePreview(path string, searchTerm *string) (*tview.TextView, error) {
 		SetWordWrap(true)
 
 	if IsTextFile(path) {
-		content, err := os.ReadFile(path)
+		content, err := readLines(path, maxNumLines)
 		if err != nil {
 			return nil, err
 		}
