@@ -18,6 +18,10 @@ import (
 	"github.com/rivo/tview"
 )
 
+const (
+	constNumSearchLines = 1000
+)
+
 type Finder struct {
 	context              *widget.Context
 	rootFlex             *tview.Flex
@@ -134,7 +138,7 @@ func (finder *Finder) setSelectedDirectory(selectedPath string) error {
 	}
 
 	if newSelectedList == nil {
-		finder.selectedList, err = helper.LoadFilePreview(selectedPath, &finder.searchTerm)
+		finder.selectedList, err = helper.LoadFilePreview(selectedPath, &finder.searchTerm, constNumSearchLines)
 		if err != nil {
 			return err
 		}

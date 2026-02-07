@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	constMaxScrollAmount = 20
+	constMaxScrollAmount    = 20
+	constMaxNumPreviewLines = 200
 )
 
 // Explorer represents the state and behavior of the file explorer
@@ -147,7 +148,7 @@ func (explorer *Explorer) setSelectedDirectory(selectedPath string) error {
 	}
 
 	if newSelectedList == nil {
-		explorer.selectedList, err = helper.LoadFilePreview(selectedPath, nil)
+		explorer.selectedList, err = helper.LoadFilePreview(selectedPath, nil, constMaxNumPreviewLines)
 		if err != nil {
 			return err
 		}
