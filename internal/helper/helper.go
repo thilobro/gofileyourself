@@ -104,10 +104,10 @@ func LoadFilePreview(path string, searchTerm *string, maxNumLines int) (*tview.T
 		SetRegions(true).
 		SetWordWrap(true)
 	content, isText, err := ReadBoundedText(path, maxNumLines)
-	if err != nil {
-		return nil, err
-	}
-	if !isText {
+	if err != nil || !isText {
+		// Unreadable (e.g. permission denied on /swap.img) or binary: show a
+		// placeholder. Returning a nil *TextView here would leave the caller
+		// holding a typed-nil interface and crash applyTheme's type assertion.
 		textView.SetText("[gray::]No preview...[-::]")
 		return textView, nil
 	}
@@ -129,13 +129,16 @@ func LoadFilePreview(path string, searchTerm *string, maxNumLines int) (*tview.T
 
 	iterator, err := lexer.Tokenise(nil, string(content))
 	if err != nil {
-		return nil, err
+		// Fall back to the raw (escaped) content rather than returning a nil view.
+		textView.SetText(tview.Escape(content))
+		return textView, nil
 	}
 
 	var buf bytes.Buffer
 	err = formatter.Format(&buf, style, iterator)
 	if err != nil {
-		return nil, err
+		textView.SetText(tview.Escape(content))
+		return textView, nil
 	}
 	formattedContent := buf.String()
 	if searchTerm != nil && *searchTerm == "" {
