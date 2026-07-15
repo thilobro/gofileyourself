@@ -11,7 +11,7 @@ To install, please run:
 make install
 ```
 
-Requires `zoxide`.
+Requires `zoxide`, `ripgrep` (`rg`) and `fzf`. Grep searches file contents with `ripgrep`; find lists files with `ripgrep` and ranks them with `fzf`.
 
 ## Run
 

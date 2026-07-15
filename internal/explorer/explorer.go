@@ -141,7 +141,7 @@ func (explorer *Explorer) setSelectedDirectory(selectedPath string) error {
 	}
 	selectedDirectoryIndex := explorer.directoryToIndexMap[selectedAbsolutePath]
 
-	directoryLoader := loader.NewDirectoryLoader(explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
+	directoryLoader := loader.NewDirectoryLoader(explorer.context.ShowHiddenFiles, false, explorer.markedFiles)
 	newSelectedList, err := directoryLoader.LoadDirectory(selectedPath)
 	if err != nil {
 		return err
@@ -166,7 +166,7 @@ func (explorer *Explorer) setParentDirectory(path string) error {
 		explorer.parentList = emptyList
 	} else {
 		parentPath := filepath.Join(currentAbsolutePath, "..")
-		directoryLoader := loader.NewDirectoryLoader(explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
+		directoryLoader := loader.NewDirectoryLoader(explorer.context.ShowHiddenFiles, false, explorer.markedFiles)
 		newParentList, err := directoryLoader.LoadDirectory(parentPath)
 		if err != nil {
 			return err
@@ -186,7 +186,7 @@ func (explorer *Explorer) setCurrentDirectory(path string) error {
 	// Update current directory
 	currentAbsolutePath, _ := filepath.Abs(path)
 	currentDirectoryIndex := explorer.directoryToIndexMap[currentAbsolutePath]
-	directoryLoader := loader.NewDirectoryLoader(explorer.context.ShowHiddenFiles, false, false, explorer.markedFiles)
+	directoryLoader := loader.NewDirectoryLoader(explorer.context.ShowHiddenFiles, false, explorer.markedFiles)
 	newCurrentList, err := directoryLoader.LoadDirectory(currentAbsolutePath)
 	if err != nil {
 		return err

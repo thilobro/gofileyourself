@@ -17,16 +17,14 @@ import (
 // DirectoryLoader handles loading directory contents into a tview.List
 type DirectoryLoader struct {
 	showHiddenFiles bool
-	showContent     bool
 	recursive       bool
 	markedItems     []string
 }
 
 // NewDirectoryLoader returns a new DirectoryLoader instance
-func NewDirectoryLoader(showHiddenFiles bool, showContent bool, recursive bool, markedItems []string) *DirectoryLoader {
+func NewDirectoryLoader(showHiddenFiles bool, recursive bool, markedItems []string) *DirectoryLoader {
 	return &DirectoryLoader{
 		showHiddenFiles: showHiddenFiles,
-		showContent:     showContent,
 		recursive:       recursive,
 		markedItems:     markedItems,
 	}
@@ -45,16 +43,6 @@ func (dl *DirectoryLoader) processEntryCallback(fullPath string, de *godirwalk.D
 	// Process directories
 	if de.IsDir() {
 		displayName += "/"
-	} else {
-		// Add file content preview if configured
-		if dl.showContent && helper.IsInterestingFile(fullPath) && helper.IsTextFile(fullPath) {
-			content, err := os.ReadFile(fullPath)
-			if err != nil {
-				log.Printf("Failed to read file content: %v", err)
-				return nil
-			}
-			displayName += " >>> " + string(content)
-		}
 	}
 	list.AddItem(displayName, relPath, 0, nil)
 	return nil
@@ -110,9 +98,6 @@ func (dl *DirectoryLoader) LoadDirectory(path string) (*tview.List, error) {
 	} else {
 		godirwalk.Walk(absPath, &godirwalk.Options{
 			Callback: func(osPathname string, de *godirwalk.Dirent) error {
-				if !dl.recursive && de.IsDir() && de.Name() != filepath.Base(absPath) {
-					return godirwalk.SkipThis
-				}
 				return dl.processEntryCallback(osPathname, de, absPath, list)
 			},
 			Unsorted: true,
@@ -212,15 +197,6 @@ func (dl *DirectoryLoader) processEntry(entry os.DirEntry, dirPath string, rootP
 		// Add git status indicators
 		if !dl.recursive {
 			displayName += dl.getGitStatusString(gitInfo, absPath)
-		}
-
-		// Add file content preview if configured
-		if dl.showContent && helper.IsInterestingFile(absPath) && helper.IsTextFile(absPath) {
-			content, err := os.ReadFile(absPath)
-			if err != nil {
-				return fmt.Errorf("failed to read file content: %w", err)
-			}
-			displayName += " >>> " + string(content)
 		}
 	}
 

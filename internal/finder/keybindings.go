@@ -13,9 +13,21 @@ func (finder *Finder) handleKeys(event *tcell.EventKey) *tcell.EventKey {
 	case tcell.KeyCtrlH:
 		finder.context.ShowHiddenFiles = !finder.context.ShowHiddenFiles
 
+		// Grep/find run external searches; just re-run them so the --hidden flag
+		// is re-evaluated (find must also refresh its cached candidate list).
+		if finder.isGrep {
+			go finder.runGrep(finder.searchTerm)
+			return nil
+		}
+		if finder.isFind {
+			finder.loadFindCandidates()
+			go finder.runFindFilter(finder.searchTerm)
+			return nil
+		}
+
 		// Remember current selection before refresh
 		_, currentName := finder.searchedList.GetItemText(finder.searchedList.GetCurrentItem())
-		finder.resetFileList(false)
+		finder.resetFileList()
 		helper.CopyListContent(finder.fileList, finder.searchedList)
 
 		// Restore current selection

@@ -56,54 +56,44 @@ func CopyFile(src string, dst string) error {
 	return err
 }
 
-func IsTextFile(path string) bool {
+// ReadBoundedText opens path exactly once, decides whether it is a text file from
+// its first chunk (null byte / invalid UTF-8 => binary), and, if so, returns up
+// to maxNumLines lines. When isText is false the caller should skip the content
+// (e.g. render "No preview..."). The whole file is never read into memory:
+// reading stops as soon as the line budget is reached. Used for single-file
+// previews.
+func ReadBoundedText(path string, maxNumLines int) (content string, isText bool, err error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return false
+		return "", false, err
 	}
 	defer file.Close()
 
-	// Read first few KB
-	buffer := make([]byte, 4096)
-	n, err := file.Read(buffer)
-	if err != nil && err != io.EOF {
-		return false
+	reader := bufio.NewReaderSize(file, 4096)
+
+	// Detect binary content from the first chunk without consuming it.
+	head, err := reader.Peek(4096)
+	if err != nil && err != io.EOF && err != bufio.ErrBufferFull {
+		return "", false, err
+	}
+	if bytes.IndexByte(head, 0) != -1 || !utf8.Valid(head) {
+		return "", false, nil
 	}
 
-	// Check for null bytes (common in binary files)
-	if bytes.IndexByte(buffer[:n], 0) != -1 {
-		return false
-	}
-
-	// Verify it's valid UTF-8
-	return utf8.Valid(buffer[:n])
-}
-
-func readLines(filename string, maxNumLines int) (string, error) {
 	var buffer bytes.Buffer
-	num_lines := 0
-	file, err := os.ReadFile(filename)
-	if err != nil {
-		return "", err
-	}
-	buf := bytes.NewBuffer(file)
-	for {
-		line, err := buf.ReadString('\n')
-		if len(line) == 0 {
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				return buffer.String(), err
-			}
-		}
+	numLines := 0
+	for numLines <= maxNumLines {
+		line, err := reader.ReadString('\n')
 		buffer.WriteString(line)
-		num_lines += 1
-		if num_lines > maxNumLines || (err != nil && err != io.EOF) {
-			return buffer.String(), err
+		numLines++
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return buffer.String(), true, err
 		}
 	}
-	return buffer.String(), nil
+	return buffer.String(), true, nil
 }
 
 // LoadFilePreview is a helper function that creates a text view for file contents
@@ -113,13 +103,13 @@ func LoadFilePreview(path string, searchTerm *string, maxNumLines int) (*tview.T
 		SetDynamicColors(true).
 		SetRegions(true).
 		SetWordWrap(true)
-	if !IsTextFile(path) {
-		textView.SetText("[gray::]No preview...[-::]")
-		return textView, nil
-	}
-	content, err := readLines(path, maxNumLines)
+	content, isText, err := ReadBoundedText(path, maxNumLines)
 	if err != nil {
 		return nil, err
+	}
+	if !isText {
+		textView.SetText("[gray::]No preview...[-::]")
+		return textView, nil
 	}
 
 	lexer := lexers.Match(path)
@@ -263,23 +253,39 @@ func writeStringsToFile(filename string, strings []string) error {
 
 func UpdateRecentLinesFile(filePath string, path *string, maxLines int) map[string]int {
 	data := make(map[string]int)
-	filteredData := make(map[string]int)
-	idx := 0
 
 	file, _ := os.ReadFile(filePath)
 	json.Unmarshal(file, &data)
-	val, ok := data[*path]
-	if ok {
-		data[*path] = val + 5 + 1
-	} else {
-		data[*path] = 5 + 1
+
+	// Bump the opened file. A freshly-opened file starts high enough to survive
+	// ~maxLines subsequent opens before the per-open decay evicts it, so the list
+	// can retain up to maxLines entries (a base of 5 previously kept only ~5).
+	data[*path] += maxLines + 1
+
+	// Decay every entry by one per open (this is what keeps the ordering "recent"),
+	// dropping any that reach zero.
+	type entry struct {
+		name string
+		rank int
 	}
-	for fileName, rank := range data {
-		rank = rank - 1
-		idx = idx + 1
-		if rank > 0 && idx <= maxLines {
-			filteredData[fileName] = rank
+	entries := make([]entry, 0, len(data))
+	for name, rank := range data {
+		rank--
+		if rank > 0 {
+			entries = append(entries, entry{name: name, rank: rank})
 		}
+	}
+
+	// Keep the highest-ranked maxLines entries. Map iteration order is random, so
+	// sort explicitly rather than truncating an arbitrary subset.
+	sort.SliceStable(entries, func(i, j int) bool { return entries[i].rank > entries[j].rank })
+	if len(entries) > maxLines {
+		entries = entries[:maxLines]
+	}
+
+	filteredData := make(map[string]int, len(entries))
+	for _, e := range entries {
+		filteredData[e.name] = e.rank
 	}
 	jsonString, _ := json.Marshal(filteredData)
 	if err := writeStringsToFile(filePath, []string{string(jsonString)}); err != nil {
@@ -489,23 +495,6 @@ func CopyListContent(original *tview.List, copy *tview.List) {
 		copy.AddItem(primaryText, secondaryText, 0, nil)
 	}
 	copy.SetCurrentItem(currentItem)
-}
-
-func CopyListView(original *tview.List) *tview.List {
-	// Create a new ListView instance
-	newList := tview.NewList().ShowSecondaryText(false)
-
-	// Copy items from original to new list
-	//
-	for j := 0; j < original.GetItemCount(); j++ {
-		primaryText, secondaryText := original.GetItemText(j)
-		newList.AddItem(primaryText, secondaryText, 0, nil)
-	}
-
-	// Copy current selection state
-	newList.SetCurrentItem(original.GetCurrentItem())
-
-	return newList
 }
 
 func ShortenPathsIfNecessary(pathList *tview.List, maxPathLen int) {
