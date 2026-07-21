@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strings"
 
 	"github.com/karrick/godirwalk"
 	"github.com/rivo/tview"
@@ -183,6 +184,11 @@ func (dl *DirectoryLoader) processEntry(entry os.DirEntry, dirPath string, rootP
 	// Process directories
 	if entry.IsDir() {
 		displayName += "/"
+		// Add git status indicators for the directory, reflecting changes to
+		// any file it contains.
+		if !dl.recursive {
+			displayName += dl.getGitStatusStringForDir(gitInfo, absPath)
+		}
 		if dl.recursive {
 			if err := dl.processDirectory(absPath, rootPath, list, gitInfo); err != nil {
 				return fmt.Errorf("recursive processing failed: %w", err)
@@ -214,4 +220,30 @@ func (dl *DirectoryLoader) getGitStatusString(gitInfo *helper.GitInfo, path stri
 		status += "[red]?[white]"
 	}
 	return status
+}
+
+// getGitStatusStringForDir generates a git status indicator for a directory,
+// marking it if any file it contains (at any depth) is uncommitted or
+// untracked.
+func (dl *DirectoryLoader) getGitStatusStringForDir(gitInfo *helper.GitInfo, dirPath string) string {
+	prefix := dirPath + string(filepath.Separator)
+	var status string
+	if containsFileWithPrefix(gitInfo.UncommittedFiles, prefix) {
+		status += "[red]*[white]"
+	}
+	if containsFileWithPrefix(gitInfo.UntrackedFiles, prefix) {
+		status += "[red]?[white]"
+	}
+	return status
+}
+
+// containsFileWithPrefix reports whether any file path in files is located
+// under the given directory prefix.
+func containsFileWithPrefix(files map[string]bool, prefix string) bool {
+	for path := range files {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+	return false
 }
